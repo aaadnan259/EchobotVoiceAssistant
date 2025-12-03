@@ -3,9 +3,10 @@ import { motion, Variants, useSpring, useMotionValue } from 'framer-motion';
 
 interface BotCharacterProps {
   state: 'idle' | 'typing' | 'processing' | 'listening' | 'happy';
+  audioLevel?: number;
 }
 
-export const BotCharacter: React.FC<BotCharacterProps> = ({ state }) => {
+export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 0 }) => {
   const [blink, setBlink] = useState(false);
   const [wink, setWink] = useState(false);
 
@@ -100,7 +101,7 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state }) => {
       }
     },
     listening: {
-      scale: 1.05,
+      scale: 1 + (audioLevel * 0.5), // Pulse with audio
       y: 0,
       transition: { type: "spring", stiffness: 300, damping: 20 }
     },

@@ -14,6 +14,15 @@ class LLMService:
         else:
             logger.warning("OpenAI API Key not found. LLM features will be disabled.")
 
+        # Initialize Memory
+        try:
+            from services.memory.vector_store import MemoryService
+            self.memory_service = MemoryService()
+            logger.info("MemoryService initialized successfully.")
+        except Exception as e:
+            logger.error(f"Failed to initialize MemoryService: {e}")
+            self.memory_service = None
+
     def get_response(self, messages: List[Dict[str, str]]) -> str:
         """
         Get a response from the LLM.
@@ -49,14 +58,46 @@ class LLMService:
             return "I'm having trouble thinking right now."
 
     def chat(self, user_input: str, context: List[Dict[str, str]] = None) -> str:
-        """Simple chat interface."""
+        """Simple chat interface with Memory (RAG)."""
         if context is None:
             context = []
         
+        # 1. Retrieve Memories (RAG)
+        try:
+            from services.memory.vector_store import MemoryService
+            # Lazy load or singleton would be better, but for now instantiate here or in __init__
+            # To avoid circular imports if any, we keep it safe. 
+            # Ideally initialized in __init__ but let's check if we can import at top.
+            pass 
+        except ImportError:
+            pass
+
+        # We will use the initialized memory_service if available
+        memory_context = ""
+        if hasattr(self, 'memory_service'):
+            try:
+                relevant_memories = self.memory_service.query(user_input)
+                if relevant_memories:
+                    memory_context = f"\n\nRelevant Past Memories:\n{relevant_memories}"
+                    logger.info(f"Retrieved Memory: {relevant_memories[:50]}...")
+            except Exception as e:
+                logger.error(f"Memory Retrieval Error: {e}")
+
         messages = [
-            {"role": "system", "content": "You are EchoBot, a helpful and witty AI assistant."}
+            {"role": "system", "content": f"You are EchoBot, a helpful and witty AI assistant.{memory_context}"}
         ] + context + [
             {"role": "user", "content": user_input}
         ]
         
-        return self.get_response(messages)
+        response = self.get_response(messages)
+
+        # 2. Store Interaction
+        if hasattr(self, 'memory_service') and response:
+            try:
+                # Store the exchange
+                full_exchange = f"User: {user_input}\nAssistant: {response}"
+                self.memory_service.add(full_exchange)
+            except Exception as e:
+                logger.error(f"Memory Storage Error: {e}")
+        
+        return response

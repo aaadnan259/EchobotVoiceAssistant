@@ -20,7 +20,8 @@ class WeatherPlugin(Plugin):
 
     def get_weather(self, location: str) -> str:
         if not self.api_key:
-            return "Weather service is not configured. Please add OPENWEATHER_API_KEY to your .env file."
+            logger.warning("OpenWeather API key missing. Falling back to wttr.in.")
+            return self.get_weather_fallback(location)
 
         try:
             params = {
@@ -50,7 +51,19 @@ class WeatherPlugin(Plugin):
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Weather API error: {e}")
-            return f"Sorry, I couldn't fetch the weather for {location}."
+            return self.get_weather_fallback(location)
         except (KeyError, ValueError) as e:
             logger.error(f"Weather data parsing error: {e}")
             return f"Sorry, I couldn't find weather information for {location}."
+
+    def get_weather_fallback(self, location: str) -> str:
+        """Fallback using wttr.in (no API key required)."""
+        try:
+            # format=3 returns "Location: Condition Temp"
+            url = f"https://wttr.in/{location}?format=3"
+            response = requests.get(url, timeout=5)
+            response.raise_for_status()
+            return f"Current weather: {response.text.strip()}"
+        except Exception as e:
+            logger.error(f"Fallback weather error: {e}")
+            return f"Sorry, I couldn't fetch the weather for {location}."
