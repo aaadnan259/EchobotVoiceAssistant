@@ -24,7 +24,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     // Load settings from backend on mount (or when modal opens)
     useEffect(() => {
         if (isOpen) {
-            // In a real app, fetch from /api/settings
             // For now, load from localStorage or defaults
             const savedSettings = localStorage.getItem('echobot_settings');
             if (savedSettings) {

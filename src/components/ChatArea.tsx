@@ -31,7 +31,7 @@ export function ChatArea({ messages }: ChatAreaProps) {
             <div
               className={`max-w-[80%] p-4 rounded-2xl backdrop-blur-md shadow-lg border ${msg.sender === 'user'
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-white/10 rounded-br-none'
-                : 'bg-gray-200 text-gray-900 border-gray-300 dark:bg-white/5 dark:text-white/90 dark:border-white/10 rounded-bl-none'
+                : 'bg-gray-200 text-gray-900 dark:bg-white/5 dark:text-white rounded-bl-none'
                 }`}
             >
               <p className="leading-relaxed">{msg.text}</p>

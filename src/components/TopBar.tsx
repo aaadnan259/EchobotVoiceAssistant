@@ -1,14 +1,13 @@
-import { Settings, Mic, MicOff, Sun, Moon } from 'lucide-react';
+import { Mic, MicOff, Sun, Moon } from 'lucide-react';
 
 interface TopBarProps {
   isMicActive: boolean;
   onMicToggle: () => void;
   theme: 'dark' | 'light';
   onThemeToggle: () => void;
-  onOpenSettings: () => void;
 }
 
-export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle, onOpenSettings }: TopBarProps) {
+export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle }: TopBarProps) {
   const handleLogoClick = () => {
     window.location.reload();
   };

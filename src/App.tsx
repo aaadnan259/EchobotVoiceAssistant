@@ -49,11 +49,19 @@ export default function App() {
   // WebSocket Connection
   useEffect(() => {
     const connectWebSocket = () => {
-      // Assuming backend is running on port 8000
-      const socket = new WebSocket('ws://localhost:8000/ws');
+      // Dynamic WebSocket URL based on current host
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.hostname;
+      const port = window.location.port ? `:${window.location.port}` : '';
+      // In development, we might be on port 5173 (Vite) but backend is 8000
+      // In production, they are likely on the same port/domain
+      const wsUrl = import.meta.env.DEV
+        ? `ws://${host}:8000/ws`
+        : `${protocol}//${host}${port}/ws`;
+
+      const socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
-        console.log('Connected to WebSocket');
         toast.success('Connected to EchoBot Brain');
       };
 
@@ -79,9 +87,6 @@ export default function App() {
           window.speechSynthesis.cancel();
 
           const utterance = new SpeechSynthesisUtterance(text);
-          // Optional: Select a specific voice if desired, or let browser default
-          // const voices = window.speechSynthesis.getVoices();
-          // utterance.voice = voices.find(v => v.name.includes('Google US English')) || null;
 
           // Get speed from settings (default 1.0)
           const savedSettings = localStorage.getItem('echobot_settings');
@@ -95,8 +100,6 @@ export default function App() {
       };
 
       socket.onclose = () => {
-        console.log('Disconnected from WebSocket');
-        // toast.error('Disconnected from server');
         // Try to reconnect after 5 seconds
         setTimeout(connectWebSocket, 5000);
       };
@@ -171,8 +174,8 @@ export default function App() {
 
   return (
     <div className={`relative min-h-screen overflow-hidden font-sans text-slate-200 selection:bg-cyan-400/30 ${theme === 'light'
-        ? 'bg-gradient-to-br from-gray-50 to-gray-200 text-slate-900'
-        : 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0B1120] to-black'
+      ? 'bg-gradient-to-br from-gray-50 to-gray-200 text-slate-900'
+      : 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0B1120] to-black'
       }`}>
       {/* Background Noise Texture */}
       <div className="bg-noise pointer-events-none" />
@@ -189,7 +192,7 @@ export default function App() {
             onMicToggle={toggleMic}
             theme={theme}
             onThemeToggle={toggleTheme}
-            onOpenSettings={() => setIsSettingsOpen(true)}
+            onThemeToggle={toggleTheme}
           />
         </div>
 

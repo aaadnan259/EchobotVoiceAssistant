@@ -64,7 +64,6 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
       recognition.onend = () => {
         // Ensure state is synced if it stops naturally
         if (isMicActive) {
-          // onMicClick(); // Optional: decide if we want to auto-toggle off or restart
         }
       };
 

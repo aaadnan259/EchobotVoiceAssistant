@@ -35,6 +35,9 @@ class LLMService:
         except openai.APIConnectionError as e:
             logger.error(f"OpenAI Connection Error: {e}")
             return "I'm having trouble connecting to my brain (OpenAI)."
+        except openai.APIError as e:
+            logger.error(f"OpenAI API Error: {e}")
+            return f"I encountered an API error: {e}"
         except openai.RateLimitError as e:
             logger.error(f"OpenAI Rate Limit Error: {e}")
             return "I'm thinking too fast! Please wait a moment."

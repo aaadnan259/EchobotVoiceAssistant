@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: echobot
+    env: docker
+    plan: free
+    branch: main
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: WEB_ENABLED
+        value: true
+      - key: OPENAI_API_KEY
+        sync: false # User must provide this in Render Dashboard
