@@ -1,0 +1,28 @@
+app_name: "EchoBot"
+version: "2.0.0"
+
+voice:
+  wake_word: "jarvis" # or "echo"
+  sensitivity: 0.5
+  tts_voice_id: "21m00Tcm4TlvDq8ikWAM" # Default ElevenLabs voice
+  tts_model_id: "eleven_turbo_v2" # Use Turbo v2 for low latency and free tier support
+  input_device_index: null
+
+ai:
+  provider: "openai"
+  llm_model: "gpt-5-nano" # User requested model
+  temperature: 0.7
+  max_tokens: 150
+
+storage:
+  db_path: "storage/db/echobot.db"
+  vector_db_path: "storage/db/chroma"
+
+web:
+  host: "0.0.0.0"
+  port: 8000
+  debug: false
+
+logging:
+  level: "INFO"
+  file: "storage/logs/echobot.log"

@@ -1,0 +1,29 @@
+2025-11-22 20:55:09 - echobot - INFO - Starting EchoBot v2.0.0
+2025-11-22 20:55:09 - echobot - INFO - ElevenLabs API configured with voice: Rachel
+2025-11-22 20:55:09 - echobot - INFO - Loading NLP model...
+2025-11-22 20:55:10 - echobot - INFO - Reminder database initialized
+2025-11-22 20:55:10 - echobot - INFO - NLP Engine initialized with all features
+2025-11-22 20:55:10 - echobot - INFO - Initialization complete
+2025-11-22 20:55:10 - echobot - INFO - Speaking: EchoBot is ready. How can I help you?...
+2025-11-22 20:55:10 - echobot - ERROR - Audio generation/playback error: Voice 'Rachel' not found.
+2025-11-22 20:55:23 - echobot - INFO - Recognized: exit
+2025-11-22 20:55:23 - echobot - INFO - Exit command received
+2025-11-22 20:55:23 - echobot - INFO - Speaking: Goodbye!...
+2025-11-22 20:55:23 - echobot - ERROR - Audio generation/playback error: Voice 'Rachel' not found.
+2025-11-22 20:55:23 - echobot - INFO - Shutting down...
+2025-11-22 20:55:23 - echobot - INFO - Reminder manager shutdown
+2025-11-22 20:55:23 - echobot - INFO - NLP Engine shutdown complete
+2025-11-22 20:55:23 - echobot - INFO - EchoBot shutdown complete
+2025-11-22 20:57:14 - echobot - INFO - Starting EchoBot v2.0.0
+2025-11-22 20:57:14 - echobot - INFO - ElevenLabs API configured with voice: Rachel
+2025-11-22 20:57:14 - echobot - INFO - Loading NLP model...
+2025-11-22 20:57:15 - echobot - INFO - Reminder database initialized
+2025-11-22 20:57:15 - echobot - INFO - NLP Engine initialized with all features
+2025-11-22 20:57:15 - echobot - INFO - Initialization complete
+2025-11-22 20:57:15 - echobot - INFO - Speaking: EchoBot is ready. How can I help you?...
+2025-11-22 20:57:15 - echobot - ERROR - Audio generation/playback error: Voice 'Rachel' not found.
+2025-11-22 20:57:34 - echobot - INFO - Keyboard interrupt received
+2025-11-22 20:57:34 - echobot - INFO - Shutting down...
+2025-11-22 20:57:34 - echobot - INFO - Reminder manager shutdown
+2025-11-22 20:57:34 - echobot - INFO - NLP Engine shutdown complete
+2025-11-22 20:57:34 - echobot - INFO - EchoBot shutdown complete
