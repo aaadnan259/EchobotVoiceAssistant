@@ -32,8 +32,17 @@ class LLMService:
                 max_tokens=150
             )
             return response.choices[0].message.content.strip()
+        except openai.APIConnectionError as e:
+            logger.error(f"OpenAI Connection Error: {e}")
+            return "I'm having trouble connecting to my brain (OpenAI)."
+        except openai.RateLimitError as e:
+            logger.error(f"OpenAI Rate Limit Error: {e}")
+            return "I'm thinking too fast! Please wait a moment."
+        except openai.AuthenticationError as e:
+            logger.error(f"OpenAI Auth Error: {e}")
+            return "My API key seems to be invalid."
         except Exception as e:
-            logger.error(f"LLM Error: {e}")
+            logger.error(f"LLM Error: {e}", exc_info=True)
             return "I'm having trouble thinking right now."
 
     def chat(self, user_input: str, context: List[Dict[str, str]] = None) -> str:

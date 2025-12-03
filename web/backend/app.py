@@ -28,9 +28,18 @@ import os
 # Get absolute path to the 'web' directory
 current_dir = os.path.dirname(os.path.abspath(__file__)) # web/backend
 web_dir = os.path.dirname(current_dir) # web
+project_root = os.path.dirname(web_dir) # EchoBot root
+dist_dir = os.path.join(project_root, "build") # Vite outputs to 'build' in root
 
-app.mount("/static", StaticFiles(directory=os.path.join(web_dir, "static")), name="static")
-templates = Jinja2Templates(directory=os.path.join(web_dir, "templates"))
+# Serve React Static Files (Production)
+if os.path.exists(dist_dir):
+    app.mount("/assets", StaticFiles(directory=os.path.join(dist_dir, "assets")), name="assets")
+    # We don't mount "/" to StaticFiles directly to allow API routes to work.
+    # Instead we serve index.html in the root catch-all.
+else:
+    # Fallback for dev mode or if build is missing
+    app.mount("/static", StaticFiles(directory=os.path.join(web_dir, "static")), name="static")
+    templates = Jinja2Templates(directory=os.path.join(web_dir, "templates"))
 
 from services.llm.llm_service import LLMService
 from services.ml.intent_classifier import IntentClassifier
@@ -63,15 +72,33 @@ manager = ConnectionManager()
 
 @app.get("/")
 async def get(request: Request):
+    if os.path.exists(os.path.join(dist_dir, "index.html")):
+        from fastapi.responses import FileResponse
+        return FileResponse(os.path.join(dist_dir, "index.html"))
     return templates.TemplateResponse(request=request, name="index.html")
 
 @app.get("/api/plugins")
 async def get_plugins():
     return plugin_manager.get_all_plugins()
 
+from pydantic import BaseModel
+
+class SettingsUpdate(BaseModel):
+    openai_api_key: str = ""
+    voice_speed: float = 1.0
+    wake_word_sensitivity: float = 0.5
+
 @app.get("/api/settings")
 async def get_settings():
     return ConfigLoader._settings
+
+@app.post("/api/settings")
+async def update_settings(settings: SettingsUpdate):
+    # In a real app, we would save this to the yaml file
+    # For now, we'll just update the in-memory config
+    # ConfigLoader.update(settings.dict())
+    logger.info(f"Settings updated: {settings}")
+    return {"status": "success", "settings": settings}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

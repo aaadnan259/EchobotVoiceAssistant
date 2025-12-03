@@ -58,28 +58,36 @@ class EchoBot:
             web_thread.start()
             logger.info(f"Web UI started at http://{ConfigLoader.get('web.host')}:{ConfigLoader.get('web.port')}")
 
-        self.voice.speak("System online. I am ready.")
-
-        # Main Loop
-        try:
-            while self.running:
-                # 1. Wait for Wake Word
-                # 1. Wait for Wake Word
-                try:
-                    if self.voice.wait_for_wake_word():
-                        self.voice.speak("Yes?")
-                        
-                        # 2. Listen for Command
-                        user_input = self.voice.listen()
-                        
-                        if user_input:
-                            self.process_input(user_input)
-                except Exception as e:
-                    logger.error(f"Voice Loop Error: {e}")
-                    time.sleep(1) # Prevent spamming on error
-                        
-        except KeyboardInterrupt:
-            self.stop()
+        # Check if server-side voice is enabled (Default to False for Web-First)
+        if ConfigLoader.get("voice.enabled", False):
+            self.voice.speak("System online. I am ready.")
+            
+            # Main Loop
+            try:
+                while self.running:
+                    # 1. Wait for Wake Word
+                    try:
+                        if self.voice.wait_for_wake_word():
+                            self.voice.speak("Yes?")
+                            
+                            # 2. Listen for Command
+                            user_input = self.voice.listen()
+                            
+                            if user_input:
+                                self.process_input(user_input)
+                    except Exception as e:
+                        logger.error(f"Voice Loop Error: {e}")
+                        time.sleep(1) # Prevent spamming on error
+            except KeyboardInterrupt:
+                self.stop()
+        else:
+            logger.info("Server-side voice disabled. Running in Web-Only mode.")
+            # Keep main thread alive for the web server
+            try:
+                while self.running:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                self.stop()
 
     def process_input(self, text: str):
         """Process user input text."""

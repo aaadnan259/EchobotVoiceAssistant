@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../echobot-ai/components"
+		},
+		{
+			"path": "../../echobot-ai/services"
+		}
+	],
+	"settings": {}
+}

@@ -1,33 +1,36 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Mic } from 'lucide-react';
+import { Send, Mic, MicOff } from 'lucide-react';
 
 interface InputBarProps {
   onSendMessage: (text: string) => void;
-  onMicClick: () => void;
+  onMicClick: () => void; // Kept for parent state updates if needed, but logic moves here
   isMicActive: boolean;
   onTypingStateChange: (isTyping: boolean) => void;
+}
+
+// Add type definition for Web Speech API
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+  }
 }
 
 export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingStateChange }: InputBarProps) {
   const [input, setInput] = useState('');
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
-    // Clear any existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
     if (input.length > 0) {
-      // User is typing
       onTypingStateChange(true);
-
-      // Set timeout to detect when user stops typing
       typingTimeoutRef.current = setTimeout(() => {
         onTypingStateChange(false);
       }, 1500);
     } else {
-      // Input is empty
       onTypingStateChange(false);
     }
 
@@ -37,6 +40,56 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
       }
     };
   }, [input, onTypingStateChange]);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window) {
+      const recognition = new window.webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        setInput(transcript);
+        onSendMessage(transcript); // Auto-send
+        onMicClick(); // Toggle off in parent
+      };
+
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+        onMicClick(); // Toggle off in parent
+      };
+
+      recognition.onend = () => {
+        // Ensure state is synced if it stops naturally
+        if (isMicActive) {
+          // onMicClick(); // Optional: decide if we want to auto-toggle off or restart
+        }
+      };
+
+      recognitionRef.current = recognition;
+    } else {
+      console.warn("Web Speech API not supported in this browser.");
+    }
+  }, []); // Empty dependency array to init once
+
+  // Handle Mic Toggle based on prop
+  useEffect(() => {
+    if (isMicActive && recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+      } catch (e) {
+        console.error("Error starting recognition:", e);
+      }
+    } else if (!isMicActive && recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore stop errors
+      }
+    }
+  }, [isMicActive]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,18 +101,20 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
-      <div className="relative">
-        {/* Background with glassmorphism */}
-        <div className="absolute inset-0 bg-white/5 backdrop-blur-xl rounded-full border border-white/10 shadow-2xl" />
-        
-        <div className="relative flex items-center gap-3 px-6 py-3">
+      <div className="relative group">
+        {/* Glow Effect on Hover/Focus */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-400/20 to-purple-500/20 rounded-full blur opacity-0 group-hover:opacity-100 transition duration-500" />
+
+        <div className="relative flex items-center gap-3">
           {/* Text Input */}
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onFocus={() => onTypingStateChange(true)}
+            onBlur={() => onTypingStateChange(false)}
             placeholder="Ask me anything…"
-            className="flex-1 bg-transparent text-white placeholder-white/30 outline-none"
+            className="flex-1 bg-transparent text-white placeholder-white/40 outline-none text-lg py-3"
           />
 
           {/* Action Buttons */}
@@ -68,21 +123,20 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
             <button
               type="button"
               onClick={onMicClick}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 ${
-                isMicActive
-                  ? 'bg-indigo-500 shadow-lg shadow-indigo-500/40'
-                  : 'bg-white/10 hover:bg-white/15'
-              }`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 ${isMicActive
+                ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse'
+                : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                }`}
               aria-label="Voice input"
             >
-              <Mic className={`w-5 h-5 ${isMicActive ? 'text-white' : 'text-white/70'}`} />
+              {isMicActive ? <MicOff className="w-5 h-5 text-white" /> : <Mic className="w-5 h-5" />}
             </button>
 
             {/* Send Button */}
             <button
               type="submit"
               disabled={!input.trim()}
-              className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-indigo-500/40"
+              className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-indigo-500/30"
               aria-label="Send message"
             >
               <Send className="w-5 h-5 text-white" />

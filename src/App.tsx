@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { TopBar } from './components/TopBar';
 import { BotCharacter } from './components/BotCharacter';
 import { ChatArea } from './components/ChatArea';
 import { InputBar } from './components/InputBar';
+import { SettingsModal } from './components/SettingsModal';
+import { toast, Toaster } from 'sonner';
 
 export interface Message {
   id: string;
@@ -17,7 +19,7 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m EchoBot, your AI assistant. How can I help you today?',
+      text: 'Hello! I\'m EchoBot. How can I help you today?',
       sender: 'assistant',
       timestamp: new Date(),
     },
@@ -25,8 +27,110 @@ export default function App() {
   const [isMicActive, setIsMicActive] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [botState, setBotState] = useState<BotState>('idle');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const ws = useRef<WebSocket | null>(null);
+
+  // Theme Persistence
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('echobot_theme') as 'dark' | 'light';
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    localStorage.setItem('echobot_theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
+
+  // WebSocket Connection
+  useEffect(() => {
+    const connectWebSocket = () => {
+      // Assuming backend is running on port 8000
+      const socket = new WebSocket('ws://localhost:8000/ws');
+
+      socket.onopen = () => {
+        console.log('Connected to WebSocket');
+        toast.success('Connected to EchoBot Brain');
+      };
+
+      socket.onmessage = (event) => {
+        const text = event.data;
+
+        // Add bot message
+        const assistantMessage: Message = {
+          id: Date.now().toString(),
+          text,
+          sender: 'assistant',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, assistantMessage]);
+
+        // Trigger happy animation
+        setBotState('happy');
+        setTimeout(() => setBotState('idle'), 2000);
+
+        // Text-to-Speech (Frontend)
+        if ('speechSynthesis' in window) {
+          // Cancel any ongoing speech
+          window.speechSynthesis.cancel();
+
+          const utterance = new SpeechSynthesisUtterance(text);
+          // Optional: Select a specific voice if desired, or let browser default
+          // const voices = window.speechSynthesis.getVoices();
+          // utterance.voice = voices.find(v => v.name.includes('Google US English')) || null;
+
+          // Get speed from settings (default 1.0)
+          const savedSettings = localStorage.getItem('echobot_settings');
+          if (savedSettings) {
+            const { voice_speed } = JSON.parse(savedSettings);
+            utterance.rate = voice_speed || 1.0;
+          }
+
+          window.speechSynthesis.speak(utterance);
+        }
+      };
+
+      socket.onclose = () => {
+        console.log('Disconnected from WebSocket');
+        // toast.error('Disconnected from server');
+        // Try to reconnect after 5 seconds
+        setTimeout(connectWebSocket, 5000);
+      };
+
+      socket.onerror = (error) => {
+        console.error('WebSocket Error:', error);
+        toast.error('Connection Error');
+      };
+
+      ws.current = socket;
+    };
+
+    connectWebSocket();
+
+    return () => {
+      ws.current?.close();
+      window.speechSynthesis.cancel(); // Cleanup speech on unmount
+    };
+  }, []);
+
+  // Auto-idle logic
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (botState === 'typing') {
+      timeout = setTimeout(() => {
+        setBotState('idle');
+      }, 1500);
+    }
+    return () => clearTimeout(timeout);
+  }, [botState]);
 
   const handleSendMessage = (text: string) => {
+    if (!text.trim()) return;
+
     // Set to processing state
     setBotState('processing');
 
@@ -36,129 +140,84 @@ export default function App() {
       sender: 'user',
       timestamp: new Date(),
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
 
-    // Simulate assistant response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: 'I understand your message. This is a demo response from EchoBot.',
-        sender: 'assistant',
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      // Show happy state briefly, then return to idle
-      setBotState('happy');
-      setTimeout(() => {
-        setBotState('idle');
-      }, 500);
-    }, 1000);
-  };
-
-  const toggleMic = () => {
-    setIsMicActive(prev => !prev);
-    setBotState(prev => prev === 'listening' ? 'idle' : 'listening');
-  };
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
-
-  const handleTypingStateChange = (isTyping: boolean) => {
-    if (isTyping && botState === 'idle') {
-      setBotState('typing');
-    } else if (!isTyping && botState === 'typing') {
+    // Send to backend
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(text);
+    } else {
+      toast.error('Not connected to server');
       setBotState('idle');
     }
   };
 
-  return (
-    <div className="relative min-h-screen overflow-hidden">
-      {/* Background with gradient and noise */}
-      <div 
-        className="fixed inset-0"
-        style={{
-          background: `
-            radial-gradient(circle at 50% 25%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
-            radial-gradient(
-              circle at 40% 30%,
-              #04060A 0%,
-              #0A0F1B 25%,
-              #111C35 45%,
-              #1A2A55 65%,
-              #3B1F44 80%,
-              #5A0E32 100%
-            )
-          `,
-        }}
-      />
+  const toggleMic = () => {
+    const newState = !isMicActive;
+    setIsMicActive(newState);
+    setBotState(newState ? 'listening' : 'idle');
+    if (newState) {
+      toast.info('Listening...');
+    } else {
+      // If manually stopped, we might want to stop recognition (handled in InputBar)
+    }
+  };
 
-      {/* Floating particles */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white/20 rounded-full"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${10 + Math.random() * 20}s linear infinite`,
-              animationDelay: `${Math.random() * 5}s`,
-            }}
-          />
-        ))}
-      </div>
+  const handleTypingStateChange = (isTyping: boolean) => {
+    if (isTyping) {
+      setBotState('typing');
+    }
+  };
+
+  return (
+    <div className={`relative min-h-screen overflow-hidden font-sans text-slate-200 selection:bg-cyan-400/30 ${theme === 'light' ? 'bg-slate-100 text-slate-900' : ''}`}>
+      {/* Background Noise Texture */}
+      <div className="bg-noise pointer-events-none" />
+      <Toaster position="top-center" />
+      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {/* Main Content */}
-      <div className="relative z-10 flex flex-col h-screen">
-        <TopBar 
-          isMicActive={isMicActive}
-          onMicToggle={toggleMic}
-          theme={theme}
-          onThemeToggle={toggleTheme}
-        />
+      <div className="relative z-10 flex flex-col h-screen max-w-5xl mx-auto">
 
-        <div className="flex-1 flex flex-col items-center justify-between py-8 px-4">
-          {/* Avatar Section */}
-          <div className="flex-shrink-0 pt-12">
+        {/* Header */}
+        <div className="p-4">
+          <TopBar
+            isMicActive={isMicActive}
+            onMicToggle={toggleMic}
+            theme={theme}
+            onThemeToggle={toggleTheme}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-between pb-6">
+
+          {/* Avatar Section - Floating in center-top */}
+          <div className="flex-shrink-0 mt-8 mb-4 transform hover:scale-105 transition-transform duration-500">
             <BotCharacter state={botState} />
           </div>
 
-          {/* Chat Area */}
-          <div className="w-full max-w-3xl flex-1 my-8">
-            <ChatArea messages={messages} />
+          {/* Chat Area - Scrollable */}
+          <div className="w-full max-w-2xl flex-1 min-h-0 px-4 mb-4">
+            {/* We pass a custom class to ChatArea if supported, or wrap it */}
+            <div className="h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+              <ChatArea messages={messages} />
+            </div>
           </div>
 
-          {/* Input Bar */}
-          <div className="w-full max-w-3xl flex-shrink-0">
-            <InputBar 
-              onSendMessage={handleSendMessage}
-              onMicClick={toggleMic}
-              isMicActive={isMicActive}
-              onTypingStateChange={handleTypingStateChange}
-            />
+          {/* Input Bar - Floating at bottom */}
+          <div className="w-full max-w-2xl px-4">
+            <div className="glass-panel rounded-full p-2 pl-6 pr-2 flex items-center gap-2">
+              <InputBar
+                onSendMessage={handleSendMessage}
+                onMicClick={toggleMic}
+                isMicActive={isMicActive}
+                onTypingStateChange={handleTypingStateChange}
+              />
+            </div>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) translateX(0);
-          }
-          25% {
-            transform: translateY(-20px) translateX(10px);
-          }
-          50% {
-            transform: translateY(-40px) translateX(-10px);
-          }
-          75% {
-            transform: translateY(-20px) translateX(5px);
-          }
-        }
-      `}</style>
     </div>
   );
 }
