@@ -18,7 +18,7 @@ export function ChatArea({ messages }: ChatAreaProps) {
   return (
     <div
       ref={scrollRef}
-      className="h-full max-h-[60vh] overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
+      className="h-full overflow-y-auto px-4 no-scrollbar"
     >
       <div className="space-y-6">
         {messages.map((msg) => (

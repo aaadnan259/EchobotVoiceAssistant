@@ -183,36 +183,33 @@ export default function App() {
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {/* Main Content */}
-      <div className="relative z-10 flex flex-col h-screen max-w-5xl mx-auto">
+      <div className="relative z-10 flex flex-col h-screen max-w-5xl mx-auto overflow-hidden">
 
-        {/* Header */}
-        <div className="p-4">
+        {/* Header - Fixed Height */}
+        <div className="flex-shrink-0 p-4">
           <TopBar
             isMicActive={isMicActive}
             onMicToggle={toggleMic}
             theme={theme}
             onThemeToggle={toggleTheme}
-            onThemeToggle={toggleTheme}
           />
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-between pb-6">
+        {/* Content Wrapper */}
+        <div className="flex-1 flex flex-col items-center min-h-0">
 
           {/* Avatar Section - Floating in center-top */}
-          <div className="flex-shrink-0 mt-8 mb-4 transform hover:scale-105 transition-transform duration-500">
+          <div className="flex-shrink-0 mt-4 mb-4 transform hover:scale-105 transition-transform duration-500">
             <BotCharacter state={botState} />
           </div>
 
-          {/* Chat Area - Scrollable */}
-          <div className="w-full max-w-2xl flex-1 min-h-0 px-4 mb-4">
-            {/* We pass a custom class to ChatArea if supported, or wrap it */}
-            <div className="h-full overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-              <ChatArea messages={messages} />
-            </div>
+          {/* Chat Area - Flexible & Scrollable */}
+          <div className="w-full max-w-2xl flex-1 min-h-0 px-4 mb-4 relative">
+            <ChatArea messages={messages} />
           </div>
 
-          {/* Input Bar - Floating at bottom */}
-          <div className="w-full max-w-2xl px-4">
+          {/* Input Bar - Fixed at Bottom */}
+          <div className="w-full max-w-2xl px-4 pb-6 flex-shrink-0">
             <div className="glass-panel rounded-full p-2 pl-6 pr-2 flex items-center gap-2">
               <InputBar
                 onSendMessage={handleSendMessage}

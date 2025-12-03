@@ -121,10 +121,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 plugin = plugin_manager.get_plugin_for_intent(intent)
                 if plugin:
                     try:
-                        # Execute plugin (assuming synchronous for now, or wrap in asyncio.to_thread if blocking)
-                        # Most plugins return a string or dict
+                        # Execute plugin
                         result = plugin.execute(user_text)
-                        response_text = str(result)
+                        
+                        # Context Injection: Pass data to LLM
+                        context_data = [
+                            {"role": "system", "content": f"REAL-TIME DATA from {intent} plugin: {result}. Use this data to answer the user."}
+                        ]
+                        response_text = llm_service.chat(user_text, context=context_data)
+                        
                     except Exception as e:
                         logger.error(f"Plugin error: {e}")
                         response_text = f"I encountered an error with the {intent} plugin."
