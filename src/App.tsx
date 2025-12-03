@@ -170,7 +170,10 @@ export default function App() {
   };
 
   return (
-    <div className={`relative min-h-screen overflow-hidden font-sans text-slate-200 selection:bg-cyan-400/30 ${theme === 'light' ? 'bg-slate-100 text-slate-900' : ''}`}>
+    <div className={`relative min-h-screen overflow-hidden font-sans text-slate-200 selection:bg-cyan-400/30 ${theme === 'light'
+        ? 'bg-gradient-to-br from-gray-50 to-gray-200 text-slate-900'
+        : 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0B1120] to-black'
+      }`}>
       {/* Background Noise Texture */}
       <div className="bg-noise pointer-events-none" />
       <Toaster position="top-center" />

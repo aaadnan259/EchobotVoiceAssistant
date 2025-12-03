@@ -21,24 +21,24 @@ export function ChatArea({ messages }: ChatAreaProps) {
       className="h-full max-h-[60vh] overflow-y-auto px-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent"
     >
       <div className="space-y-6">
-        {messages.map((message, index) => (
+        {messages.map((msg) => (
           <motion.div
-            key={message.id}
-            initial={{ opacity: 0, y: 20 }}
+            key={msg.id}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
-            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[70%] rounded-2xl px-6 py-4 ${message.sender === 'user'
-                  ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/20'
-                  : 'bg-white/5 backdrop-blur-md text-white/90 border border-white/10 shadow-lg'
+              className={`max-w-[80%] p-4 rounded-2xl backdrop-blur-md shadow-lg border ${msg.sender === 'user'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-white/10 rounded-br-none'
+                : 'bg-gray-200 text-gray-900 border-gray-300 dark:bg-white/5 dark:text-white/90 dark:border-white/10 rounded-bl-none'
                 }`}
             >
-              <p className="break-words leading-relaxed">{message.text}</p>
-              <p className={`mt-2 text-xs ${message.sender === 'user' ? 'text-white/50' : 'text-white/30'}`}>
-                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </p>
+              <p className="leading-relaxed">{msg.text}</p>
+              <span className={`text-xs mt-2 block ${msg.sender === 'user' ? 'text-white/60' : 'text-gray-500 dark:text-white/40'
+                }`}>
+                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
             </div>
           </motion.div>
         ))}

@@ -168,12 +168,12 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state }) => {
         animate={state}
         className="relative w-40 h-40 rounded-full z-10"
         style={{
-          background: 'radial-gradient(circle at 35% 35%, #a78bfa 0%, #7c3aed 40%, #4c1d95 100%)',
+          background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #e5e7eb 40%, #9ca3af 100%)',
           boxShadow: `
-            inset -10px -10px 20px rgba(0, 0, 0, 0.5),
-            inset 10px 10px 20px rgba(255, 255, 255, 0.2),
-            0px 20px 40px rgba(0, 0, 0, 0.4),
-            0px 0px 60px rgba(124, 58, 237, 0.3)
+            inset -10px -10px 20px rgba(0, 0, 0, 0.2),
+            inset 10px 10px 20px rgba(255, 255, 255, 0.8),
+            0px 20px 40px rgba(0, 0, 0, 0.3),
+            0px 0px 60px rgba(255, 255, 255, 0.1)
           `
         }}
       >
@@ -188,19 +188,25 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state }) => {
           <motion.div
             variants={leftEyeVariants}
             animate={state}
-            className="bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+            className="bg-gray-900 rounded-full relative overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
             style={{ width: 16, height: 24 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          />
+          >
+            {/* Reflection Dot */}
+            <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full opacity-90" />
+          </motion.div>
 
           {/* Right Eye */}
           <motion.div
             variants={rightEyeVariants}
             animate={state}
-            className="bg-white rounded-full shadow-[0_0_15px_rgba(255,255,255,0.8)]"
+            className="bg-gray-900 rounded-full relative overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
             style={{ width: 16, height: 24 }}
             transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          />
+          >
+            {/* Reflection Dot */}
+            <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full opacity-90" />
+          </motion.div>
         </motion.div>
       </motion.div>
 
