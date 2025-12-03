@@ -9,7 +9,7 @@ from utils.logger import logger
 
 class IntentClassifier:
     def __init__(self):
-        self.model_path = "models/intent_model.pkl"
+        self.model_path = "models/intent_model_v2.pkl"
         self.pipeline = None
         self.intents = []
         
@@ -18,6 +18,13 @@ class IntentClassifier:
             ("what is the weather", "weather"),
             ("how is the weather in London", "weather"),
             ("is it raining", "weather"),
+            ("weather in Toledo", "weather"),
+            ("what's the weather like in New York", "weather"),
+            ("check weather for Paris", "weather"),
+            ("current temperature in Tokyo", "weather"),
+            ("forecast for tomorrow", "weather"),
+            ("is it sunny outside", "weather"),
+            ("do I need an umbrella", "weather"),
             ("search for python tutorials", "search"),
             ("google latest news", "search"),
             ("who is Elon Musk", "wikipedia"),
@@ -33,6 +40,8 @@ class IntentClassifier:
             ("what can you do", "help"),
             ("let's chat", "chat"),
             ("tell me a joke", "chat"),
+            ("how are you", "chat"),
+            ("good morning", "chat"),
         ]
 
     def train(self):
@@ -77,7 +86,7 @@ class IntentClassifier:
         logger.debug(f"Intent: {intent} ({confidence:.2f})")
         
         # Threshold for fallback to LLM/Chat
-        if confidence < 0.4:
+        if confidence < 0.35:
             return "chat", confidence
             
         return intent, confidence
