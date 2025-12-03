@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TopBar } from './components/TopBar';
-import { AssistantAvatar } from './components/AssistantAvatar';
+import { BotCharacter } from './components/BotCharacter';
 import { ChatArea } from './components/ChatArea';
 import { InputBar } from './components/InputBar';
 
@@ -10,6 +10,8 @@ export interface Message {
   sender: 'user' | 'assistant';
   timestamp: Date;
 }
+
+type BotState = 'idle' | 'typing' | 'processing' | 'listening' | 'happy';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([
@@ -22,8 +24,12 @@ export default function App() {
   ]);
   const [isMicActive, setIsMicActive] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [botState, setBotState] = useState<BotState>('idle');
 
   const handleSendMessage = (text: string) => {
+    // Set to processing state
+    setBotState('processing');
+
     const userMessage: Message = {
       id: Date.now().toString(),
       text,
@@ -42,27 +48,49 @@ export default function App() {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+      
+      // Show happy state briefly, then return to idle
+      setBotState('happy');
+      setTimeout(() => {
+        setBotState('idle');
+      }, 500);
     }, 1000);
   };
 
   const toggleMic = () => {
     setIsMicActive(prev => !prev);
+    setBotState(prev => prev === 'listening' ? 'idle' : 'listening');
   };
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const handleTypingStateChange = (isTyping: boolean) => {
+    if (isTyping && botState === 'idle') {
+      setBotState('typing');
+    } else if (!isTyping && botState === 'typing') {
+      setBotState('idle');
+    }
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Background with gradient and noise */}
       <div 
-        className="fixed inset-0 bg-gradient-to-br from-[#000000] via-[#0d0821] to-[#120b28]"
+        className="fixed inset-0"
         style={{
-          backgroundImage: `
-            radial-gradient(circle at 80% 20%, rgba(79, 70, 229, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-            url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E")
+          background: `
+            radial-gradient(circle at 50% 25%, rgba(59, 130, 246, 0.15) 0%, transparent 40%),
+            radial-gradient(
+              circle at 40% 30%,
+              #04060A 0%,
+              #0A0F1B 25%,
+              #111C35 45%,
+              #1A2A55 65%,
+              #3B1F44 80%,
+              #5A0E32 100%
+            )
           `,
         }}
       />
@@ -95,7 +123,7 @@ export default function App() {
         <div className="flex-1 flex flex-col items-center justify-between py-8 px-4">
           {/* Avatar Section */}
           <div className="flex-shrink-0 pt-12">
-            <AssistantAvatar isActive={isMicActive} />
+            <BotCharacter state={botState} />
           </div>
 
           {/* Chat Area */}
@@ -109,6 +137,7 @@ export default function App() {
               onSendMessage={handleSendMessage}
               onMicClick={toggleMic}
               isMicActive={isMicActive}
+              onTypingStateChange={handleTypingStateChange}
             />
           </div>
         </div>

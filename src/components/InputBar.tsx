@@ -1,14 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Send, Mic } from 'lucide-react';
 
 interface InputBarProps {
   onSendMessage: (text: string) => void;
   onMicClick: () => void;
   isMicActive: boolean;
+  onTypingStateChange: (isTyping: boolean) => void;
 }
 
-export function InputBar({ onSendMessage, onMicClick, isMicActive }: InputBarProps) {
+export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingStateChange }: InputBarProps) {
   const [input, setInput] = useState('');
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    // Clear any existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    if (input.length > 0) {
+      // User is typing
+      onTypingStateChange(true);
+
+      // Set timeout to detect when user stops typing
+      typingTimeoutRef.current = setTimeout(() => {
+        onTypingStateChange(false);
+      }, 1500);
+    } else {
+      // Input is empty
+      onTypingStateChange(false);
+    }
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [input, onTypingStateChange]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
