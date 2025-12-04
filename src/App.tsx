@@ -29,6 +29,7 @@ export default function App() {
   const [botState, setBotState] = useState<BotState>('idle');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const ws = useRef<WebSocket | null>(null);
+  const hasConnected = useRef(false);
 
   // Theme Persistence
   useEffect(() => {
@@ -62,7 +63,10 @@ export default function App() {
       const socket = new WebSocket(wsUrl);
 
       socket.onopen = () => {
-        toast.success('Connected to EchoBot Brain');
+        if (!hasConnected.current) {
+          toast.success('Connected to EchoBot Brain');
+          hasConnected.current = true;
+        }
       };
 
       socket.onmessage = (event) => {
