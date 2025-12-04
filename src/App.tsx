@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import { TopBar } from './components/TopBar';
 import { BotCharacter } from './components/BotCharacter';
 import { ChatArea } from './components/ChatArea';
 import { InputBar } from './components/InputBar';
 import { SettingsModal } from './components/SettingsModal';
-import { WelcomeScreen } from './components/WelcomeScreen';
 import { toast, Toaster } from 'sonner';
 
 export interface Message {
@@ -30,7 +28,6 @@ export default function App() {
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [botState, setBotState] = useState<BotState>('idle');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
   const ws = useRef<WebSocket | null>(null);
   const hasConnected = useRef(false);
 
@@ -188,12 +185,6 @@ export default function App() {
       <div className="bg-noise pointer-events-none" />
       <div className="bg-noise pointer-events-none" />
       <Toaster position="top-center" />
-
-      <AnimatePresence>
-        {showWelcome && (
-          <WelcomeScreen onComplete={() => setShowWelcome(false)} />
-        )}
-      </AnimatePresence>
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
