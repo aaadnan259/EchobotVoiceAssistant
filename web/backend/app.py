@@ -42,7 +42,7 @@ else:
     templates = Jinja2Templates(directory=os.path.join(web_dir, "templates"))
 
 from services.llm.llm_service import LLMService
-from services.ml.intent_classifier import IntentClassifier
+# from services.ml.intent_classifier import IntentClassifier
 
 # Global Managers
 plugin_manager = PluginManager()
@@ -50,8 +50,7 @@ plugin_manager.load_plugins()
 
 # Initialize AI Services
 llm_service = LLMService()
-intent_classifier = IntentClassifier()
-intent_classifier.load()
+# intent_classifier = IntentClassifier() # Deprecated in favor of Function Calling
 
 class ConnectionManager:
     def __init__(self):
@@ -108,37 +107,75 @@ async def websocket_endpoint(websocket: WebSocket):
             user_text = await websocket.receive_text()
             logger.info(f"Web User: {user_text}")
             
-            # 1. Intent Classification
-            intent, confidence = intent_classifier.predict(user_text)
-            logger.info(f"Predicted Intent: {intent} ({confidence})")
+            # 1. Prepare Context (RAG)
+            memory_context = ""
+            if llm_service.memory_service:
+                try:
+                    relevant_memories = llm_service.memory_service.query(user_text)
+                    if relevant_memories:
+                        memory_context = f"\n\nRelevant Past Memories:\n{relevant_memories}"
+                        logger.info(f"Retrieved Memory: {relevant_memories[:50]}...")
+                except Exception as e:
+                    logger.error(f"Memory Retrieval Error: {e}")
+
+            # 2. Construct Messages
+            messages = [
+                {"role": "system", "content": f"You are EchoBot, a helpful and witty AI assistant.{memory_context}"},
+                {"role": "user", "content": user_text}
+            ]
             
-            response_text = ""
+            # 3. Get Tools
+            tools = plugin_manager.get_tool_definitions()
             
-            # 2. Routing
-            if intent == "chat":
-                response_text = llm_service.chat(user_text)
-            else:
-                plugin = plugin_manager.get_plugin_for_intent(intent)
-                if plugin:
-                    try:
-                        # Execute plugin
-                        result = plugin.execute(user_text)
-                        
-                        # Context Injection: Pass data to LLM
-                        context_data = [
-                            {"role": "system", "content": f"REAL-TIME DATA from {intent} plugin: {result}. Use this data to answer the user."}
-                        ]
-                        response_text = llm_service.chat(user_text, context=context_data)
-                        
-                    except Exception as e:
-                        logger.error(f"Plugin error: {e}")
-                        response_text = f"I encountered an error with the {intent} plugin."
+            # 4. First LLM Call
+            response_message = llm_service.get_response(messages, tools=tools)
+            
+            # Handle Error
+            if isinstance(response_message, str):
+                await manager.broadcast(response_message)
+                continue
+
+            response_text = response_message.content
+
+            # 5. Handle Tool Calls
+            if response_message.tool_calls:
+                # Append the assistant's tool call message to history
+                messages.append(response_message)
+                
+                for tool_call in response_message.tool_calls:
+                    function_name = tool_call.function.name
+                    arguments = json.loads(tool_call.function.arguments)
+                    
+                    logger.info(f"Executing tool: {function_name} with args: {arguments}")
+                    result = plugin_manager.execute_tool(function_name, arguments)
+                    
+                    # Append tool result to history
+                    messages.append({
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "name": function_name,
+                        "content": str(result)
+                    })
+                
+                # 6. Second LLM Call (Final Answer)
+                # We don't pass tools here to force a text response, or we could if we want multi-step
+                final_response = llm_service.get_response(messages)
+                if isinstance(final_response, str):
+                    response_text = final_response
                 else:
-                    # Fallback to LLM if no plugin found for intent
-                    response_text = llm_service.chat(user_text)
+                    response_text = final_response.content
+
+            # 7. Store Interaction (Memory)
+            if llm_service.memory_service and response_text:
+                try:
+                    full_exchange = f"User: {user_text}\nAssistant: {response_text}"
+                    llm_service.memory_service.add(full_exchange)
+                except Exception as e:
+                    logger.error(f"Memory Storage Error: {e}")
             
-            # 3. Send Response
-            await manager.broadcast(response_text)
+            # 8. Send Response
+            if response_text:
+                await manager.broadcast(response_text)
             
     except Exception as e:
         logger.error(f"WebSocket error: {e}")

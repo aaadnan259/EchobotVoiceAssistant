@@ -1,5 +1,5 @@
 import openai
-from typing import List, Dict
+from typing import List, Dict, Any, Optional
 from config.loader import ConfigLoader
 from utils.logger import logger
 
@@ -23,24 +23,30 @@ class LLMService:
             logger.error(f"Failed to initialize MemoryService: {e}")
             self.memory_service = None
 
-    def get_response(self, messages: List[Dict[str, str]]) -> str:
+    def get_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
         """
         Get a response from the LLM.
         
         Args:
-            messages: List of message dicts [{"role": "user", "content": "..."}]
+            messages: List of message dicts
+            tools: List of tool definitions
         """
         if not self.client:
             return "I'm sorry, my AI brain is not connected. Please check your API keys."
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.7,
-                max_tokens=150
-            )
-            return response.choices[0].message.content.strip()
+            params = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 150
+            }
+            if tools:
+                params["tools"] = tools
+                params["tool_choice"] = "auto"
+
+            response = self.client.chat.completions.create(**params)
+            return response.choices[0].message
         except openai.APIConnectionError as e:
             logger.error(f"OpenAI Connection Error: {e}")
             return "I'm having trouble connecting to my brain (OpenAI)."
@@ -57,17 +63,14 @@ class LLMService:
             logger.error(f"LLM Error: {e}", exc_info=True)
             return "I'm having trouble thinking right now."
 
-    def chat(self, user_input: str, context: List[Dict[str, str]] = None) -> str:
-        """Simple chat interface with Memory (RAG)."""
+    def chat(self, user_input: str, context: List[Dict[str, str]] = None, tools: List[Dict[str, Any]] = None) -> Any:
+        """Simple chat interface with Memory (RAG) and Tools."""
         if context is None:
             context = []
         
         # 1. Retrieve Memories (RAG)
         try:
             from services.memory.vector_store import MemoryService
-            # Lazy load or singleton would be better, but for now instantiate here or in __init__
-            # To avoid circular imports if any, we keep it safe. 
-            # Ideally initialized in __init__ but let's check if we can import at top.
             pass 
         except ImportError:
             pass
@@ -89,15 +92,25 @@ class LLMService:
             {"role": "user", "content": user_input}
         ]
         
-        response = self.get_response(messages)
+        response_message = self.get_response(messages, tools)
+
+        # Handle error string
+        if isinstance(response_message, str):
+            return response_message, None
+
+        # Check for tool calls
+        if response_message.tool_calls:
+            return None, response_message.tool_calls
+        
+        response_text = response_message.content
 
         # 2. Store Interaction
-        if hasattr(self, 'memory_service') and response:
+        if hasattr(self, 'memory_service') and response_text:
             try:
                 # Store the exchange
-                full_exchange = f"User: {user_input}\nAssistant: {response}"
+                full_exchange = f"User: {user_input}\nAssistant: {response_text}"
                 self.memory_service.add(full_exchange)
             except Exception as e:
                 logger.error(f"Memory Storage Error: {e}")
         
-        return response
+        return response_text, None

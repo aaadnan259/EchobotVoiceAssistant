@@ -82,3 +82,89 @@ class PluginManager:
             {"name": p.name, "description": p.description, "intents": p.intents}
             for p in self.plugins.values()
         ]
+
+    def get_tool_definitions(self) -> List[Dict[str, Any]]:
+        """Generate OpenAI tool definitions for loaded plugins."""
+        tools = []
+        
+        if "Weather" in self.plugins:
+            tools.append({
+                "type": "function",
+                "function": {
+                    "name": "get_weather",
+                    "description": "Get the current weather for a specific location.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "location": {
+                                "type": "string",
+                                "description": "The city and state, e.g. San Francisco, CA"
+                            }
+                        },
+                        "required": ["location"]
+                    }
+                }
+            })
+
+        if "Wikipedia" in self.plugins:
+            tools.append({
+                "type": "function",
+                "function": {
+                    "name": "search_wikipedia",
+                    "description": "Search Wikipedia for a topic.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The topic to search for"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            })
+            
+        if "WebSearch" in self.plugins:
+             tools.append({
+                "type": "function",
+                "function": {
+                    "name": "web_search",
+                    "description": "Search the internet for current events or information.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query"
+                            }
+                        },
+                        "required": ["query"]
+                    }
+                }
+            })
+        
+        return tools
+
+    def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+        """Execute a tool by name with arguments."""
+        try:
+            if tool_name == "get_weather":
+                plugin = self.plugins.get("Weather")
+                if plugin:
+                    return plugin.get_weather(arguments.get("location"))
+            
+            elif tool_name == "search_wikipedia":
+                plugin = self.plugins.get("Wikipedia")
+                if plugin:
+                    return plugin.search(arguments.get("query"))
+            
+            elif tool_name == "web_search":
+                plugin = self.plugins.get("WebSearch")
+                if plugin:
+                    return plugin.search(arguments.get("query"))
+            
+            return f"Tool {tool_name} not found or plugin not loaded."
+        except Exception as e:
+            logger.error(f"Error executing tool {tool_name}: {e}")
+            return f"Error executing tool {tool_name}: {e}"
