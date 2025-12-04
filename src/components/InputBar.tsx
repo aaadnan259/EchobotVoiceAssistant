@@ -101,8 +101,7 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
   return (
     <form onSubmit={handleSubmit} className="w-full">
       <div className="relative group">
-        {/* Glow Effect on Hover/Focus */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-400/20 to-purple-500/20 rounded-full blur opacity-0 group-hover:opacity-100 transition duration-500" />
+        {/* Internal Glow Removed - Handled by Parent Wrapper */}
 
         <div className="relative flex items-center gap-3">
           {/* Text Input */}
@@ -113,7 +112,7 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
             onFocus={() => onTypingStateChange(true)}
             onBlur={() => onTypingStateChange(false)}
             placeholder="Ask me anything…"
-            className="flex-1 bg-transparent text-white placeholder-white/40 outline-none text-lg py-3"
+            className="flex-1 bg-transparent text-white placeholder-white/60 outline-none text-lg py-3"
           />
 
           {/* Action Buttons */}
