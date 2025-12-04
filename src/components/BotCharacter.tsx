@@ -202,12 +202,12 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
           animate={state}
           className="relative w-40 h-40 rounded-full z-10"
           style={{
-            background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #e5e7eb 40%, #9ca3af 100%)',
+            background: 'radial-gradient(circle at 35% 35%, #d8b4fe 0%, #a855f7 40%, #581c87 100%)',
             boxShadow: `
               inset -10px -10px 20px rgba(0, 0, 0, 0.2),
               inset 10px 10px 20px rgba(255, 255, 255, 0.8),
               0px 20px 40px rgba(0, 0, 0, 0.3),
-              0px 0px 60px rgba(255, 255, 255, 0.1)
+              0px 0px 60px rgba(168, 85, 247, 0.4)
             `
           }}
         >
