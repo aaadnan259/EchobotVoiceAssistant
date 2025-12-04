@@ -215,7 +215,7 @@ export default function App() {
 
           {/* Input Bar - Fixed at Bottom */}
           <div className="w-full max-w-2xl px-4 pb-6 flex-shrink-0">
-            <div className="chat-input p-2 pl-6 pr-2 flex items-center gap-2">
+            <div className="chat-input flex items-center gap-2">
               <InputBar
                 onSendMessage={handleSendMessage}
                 onMicClick={toggleMic}

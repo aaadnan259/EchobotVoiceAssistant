@@ -109,20 +109,40 @@
   }
 
   /* Chat Input Custom Styles */
+  /* Chat Input Custom Styles - Nuclear Option */
   .chat-input {
+    /* Force the background to be the dark gradient */
+    background: linear-gradient(135deg, rgba(40, 20, 60, 0.9), rgba(20, 20, 50, 0.9)) !important;
     border: 2px solid rgba(138, 43, 226, 0.3);
-    /* Subtle purple border */
-    background: rgba(20, 20, 40, 0.8);
-    /* Dark glass background */
-    border-radius: 9999px;
-    /* rounded-full */
+    color: white !important;
+    border-radius: 25px;
+    padding: 10px 20px;
+    /* Adjusted padding to fit buttons */
+    width: 100%;
+
+    /* Remove all browser defaults */
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
   }
 
   .chat-input:focus-within {
-    border-color: #bd00ff;
-    box-shadow: 0 0 15px rgba(189, 0, 255, 0.5);
-    /* Soft neon glow */
-    outline: none !important;
+    border-color: #bd00ff !important;
+    box-shadow: 0 0 15px rgba(189, 0, 255, 0.5) !important;
+  }
+
+  /* THE FIX: Stop Chrome from turning it white on Autofill */
+  /* Target the input inside the chat-input container */
+  .chat-input input:-webkit-autofill,
+  .chat-input input:-webkit-autofill:hover,
+  .chat-input input:-webkit-autofill:focus,
+  .chat-input input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px rgb(30, 20, 50) inset !important;
+    /* Matches dark theme */
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: white;
   }
 }
