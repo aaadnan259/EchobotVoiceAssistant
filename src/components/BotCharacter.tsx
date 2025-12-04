@@ -7,9 +7,22 @@ interface BotCharacterProps {
 }
 
 export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 0 }) => {
+  const [blink, setBlink] = useState(false);
+  const [wink, setWink] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+
   const lastMousePos = useRef({ x: 0, y: 0, time: 0 });
   const shakeTimeout = useRef<NodeJS.Timeout | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Mouse Tracking State
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  // Smooth spring animation for eyes
+  const springConfig = { damping: 25, stiffness: 150 };
+  const eyeX = useSpring(mouseX, springConfig);
+  const eyeY = useSpring(mouseY, springConfig);
 
   // Global Mouse Listener
   useEffect(() => {
