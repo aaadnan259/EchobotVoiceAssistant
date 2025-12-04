@@ -7,19 +7,9 @@ interface BotCharacterProps {
 }
 
 export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 0 }) => {
-  const [blink, setBlink] = useState(false);
-  const [wink, setWink] = useState(false);
-
-  // Mouse Tracking State
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  // Smooth spring animation for eyes
-  const springConfig = { damping: 25, stiffness: 150 };
-  const eyeX = useSpring(mouseX, springConfig);
-  const eyeY = useSpring(mouseY, springConfig);
-
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [isShaking, setIsShaking] = useState(false);
+  const lastMousePos = useRef({ x: 0, y: 0, time: 0 });
+  const shakeTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Global Mouse Listener
   useEffect(() => {
@@ -32,6 +22,30 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
       }
 
       if (!containerRef.current) return;
+
+      // Velocity Detection
+      const now = Date.now();
+      const dt = now - lastMousePos.current.time;
+
+      if (dt > 0) {
+        const dx_vel = e.clientX - lastMousePos.current.x;
+        const dy_vel = e.clientY - lastMousePos.current.y;
+        const distance_vel = Math.sqrt(dx_vel * dx_vel + dy_vel * dy_vel);
+        const velocity = distance_vel / dt; // pixels per ms
+
+        // Threshold for "scrubbing" (2.5 px/ms is fast)
+        if (velocity > 2.5 && !isShaking) {
+          setIsShaking(true);
+
+          // Reset shake after 500ms
+          if (shakeTimeout.current) clearTimeout(shakeTimeout.current);
+          shakeTimeout.current = setTimeout(() => {
+            setIsShaking(false);
+          }, 500);
+        }
+      }
+
+      lastMousePos.current = { x: e.clientX, y: e.clientY, time: now };
 
       const rect = containerRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
@@ -52,7 +66,7 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
 
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [state, mouseX, mouseY]);
+  }, [state, mouseX, mouseY, isShaking]);
 
   // Reset eyes when state changes to non-tracking
   useEffect(() => {
@@ -65,7 +79,7 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
   // Random Idle Animations (Blink, Wink)
   useEffect(() => {
     const triggerIdleAction = () => {
-      if (state !== 'idle') return;
+      if (state !== 'idle' || isShaking) return; // Don't blink while shaking
 
       const rand = Math.random();
       if (rand < 0.1) {
@@ -84,7 +98,7 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
 
     const timeoutId = setTimeout(triggerIdleAction, 2000);
     return () => clearTimeout(timeoutId);
-  }, [state]);
+  }, [state, isShaking]);
 
   // Sphere Variants
   const sphereVariants: Variants = {
@@ -141,7 +155,9 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
   // Individual Eye Variants
   const leftEyeVariants: Variants = {
     idle: {
-      height: blink || wink ? 2 : 24,
+      height: isShaking ? 4 : (blink || wink ? 2 : 24), // Squint when shaking
+      width: isShaking ? 22 : 16,
+      rotate: isShaking ? -15 : 0,
       opacity: blink || wink ? 0.5 : 1
     },
     listening: { height: 28, width: 20 },
@@ -152,7 +168,9 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
 
   const rightEyeVariants: Variants = {
     idle: {
-      height: blink ? 2 : 24,
+      height: isShaking ? 4 : (blink ? 2 : 24), // Squint when shaking
+      width: isShaking ? 22 : 16,
+      rotate: isShaking ? 15 : 0,
       opacity: blink ? 0.5 : 1
     },
     listening: { height: 28, width: 20 },
@@ -163,53 +181,56 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
 
   return (
     <div ref={containerRef} className="relative w-64 h-64 flex items-center justify-center">
-      {/* The Sphere */}
-      <motion.div
-        variants={sphereVariants}
-        animate={state}
-        className="relative w-40 h-40 rounded-full z-10"
-        style={{
-          background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #e5e7eb 40%, #9ca3af 100%)',
-          boxShadow: `
-            inset -10px -10px 20px rgba(0, 0, 0, 0.2),
-            inset 10px 10px 20px rgba(255, 255, 255, 0.8),
-            0px 20px 40px rgba(0, 0, 0, 0.3),
-            0px 0px 60px rgba(255, 255, 255, 0.1)
-          `
-        }}
-      >
-        {/* Face Container */}
+      {/* Wrapper for Shake Animation to avoid conflict with floating motion */}
+      <div className={isShaking ? "is-shaking" : ""}>
+        {/* The Sphere */}
         <motion.div
-          variants={eyesContainerVariants}
+          variants={sphereVariants}
           animate={state}
-          style={{ x: eyeX, y: eyeY }} // Apply mouse tracking here
-          className="absolute inset-0 flex items-center justify-center gap-6"
+          className="relative w-40 h-40 rounded-full z-10"
+          style={{
+            background: 'radial-gradient(circle at 35% 35%, #ffffff 0%, #e5e7eb 40%, #9ca3af 100%)',
+            boxShadow: `
+              inset -10px -10px 20px rgba(0, 0, 0, 0.2),
+              inset 10px 10px 20px rgba(255, 255, 255, 0.8),
+              0px 20px 40px rgba(0, 0, 0, 0.3),
+              0px 0px 60px rgba(255, 255, 255, 0.1)
+            `
+          }}
         >
-          {/* Left Eye */}
+          {/* Face Container */}
           <motion.div
-            variants={leftEyeVariants}
+            variants={eyesContainerVariants}
             animate={state}
-            className="bg-gray-900 rounded-full relative overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
-            style={{ width: 16, height: 24 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            style={{ x: eyeX, y: eyeY }} // Apply mouse tracking here
+            className="absolute inset-0 flex items-center justify-center gap-6"
           >
-            {/* Reflection Dot */}
-            <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full opacity-90" />
-          </motion.div>
+            {/* Left Eye */}
+            <motion.div
+              variants={leftEyeVariants}
+              animate={state}
+              className="bg-gray-900 rounded-full relative overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
+              style={{ width: 16, height: 24 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            >
+              {/* Reflection Dot */}
+              <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full opacity-90" />
+            </motion.div>
 
-          {/* Right Eye */}
-          <motion.div
-            variants={rightEyeVariants}
-            animate={state}
-            className="bg-gray-900 rounded-full relative overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
-            style={{ width: 16, height: 24 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-          >
-            {/* Reflection Dot */}
-            <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full opacity-90" />
+            {/* Right Eye */}
+            <motion.div
+              variants={rightEyeVariants}
+              animate={state}
+              className="bg-gray-900 rounded-full relative overflow-hidden shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
+              style={{ width: 16, height: 24 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            >
+              {/* Reflection Dot */}
+              <div className="absolute top-1 left-1 w-1.5 h-1.5 bg-white rounded-full opacity-90" />
+            </motion.div>
           </motion.div>
         </motion.div>
-      </motion.div>
+      </div>
 
       {/* Ground Shadow */}
       <motion.div
