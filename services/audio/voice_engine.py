@@ -1,11 +1,11 @@
 import speech_recognition as sr
-from elevenlabs import generate, play, set_api_key
 import pvporcupine
 import struct
 import pyaudio
 import os
 from config.loader import ConfigLoader
 from utils.logger import logger
+from services.audio.tts import TTSEngine
 
 class VoiceEngine:
     def __init__(self):
@@ -13,11 +13,7 @@ class VoiceEngine:
         self.microphone = sr.Microphone()
         
         # TTS Setup
-        self.elevenlabs_key = ConfigLoader.get("voice.elevenlabs_api_key")
-        if self.elevenlabs_key:
-            set_api_key(self.elevenlabs_key)
-        
-        self.voice_id = ConfigLoader.get("voice.tts_voice_id", "21m00Tcm4TlvDq8ikWAM")
+        self.tts = TTSEngine()
         
         # Wake Word Setup
         self.porcupine_key = ConfigLoader.get("voice.porcupine_access_key")
@@ -59,20 +55,8 @@ class VoiceEngine:
                 return None
 
     def speak(self, text: str):
-        """Convert text to speech."""
-        logger.info(f"Speaking: {text}")
-        if self.elevenlabs_key:
-            try:
-                audio = generate(
-                    text=text,
-                    voice=self.voice_id,
-                    model="eleven_monolingual_v1"
-                )
-                play(audio)
-            except Exception as e:
-                logger.error(f"ElevenLabs TTS Error: {e}")
-        else:
-            logger.warning("TTS not configured (missing API key).")
+        """Convert text to speech using ElevenLabs streaming."""
+        self.tts.speak_stream(text)
 
     def wait_for_wake_word(self):
         """Block until wake word is detected."""
