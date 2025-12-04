@@ -214,7 +214,7 @@ export default function App() {
 
           {/* Input Bar - Fixed at Bottom */}
           <div className="w-full max-w-2xl px-4 pb-6 flex-shrink-0">
-            <div className="rounded-full p-2 pl-6 pr-2 flex items-center gap-2 bg-gradient-to-br from-violet-900/90 to-blue-900/90 border border-white/20 shadow-[0_0_20px_rgba(139,92,246,0.3)] focus-within:shadow-[0_0_30px_rgba(139,92,246,0.6)] focus-within:border-white/40 transition-all duration-300">
+            <div className="chat-input p-2 pl-6 pr-2 flex items-center gap-2">
               <InputBar
                 onSendMessage={handleSendMessage}
                 onMicClick={toggleMic}

@@ -107,4 +107,22 @@
   .is-shaking {
     animation: shiver 0.5s linear infinite;
   }
+
+  /* Chat Input Custom Styles */
+  .chat-input {
+    border: 2px solid rgba(138, 43, 226, 0.3);
+    /* Subtle purple border */
+    background: rgba(20, 20, 40, 0.8);
+    /* Dark glass background */
+    border-radius: 9999px;
+    /* rounded-full */
+    transition: all 0.3s ease;
+  }
+
+  .chat-input:focus-within {
+    border-color: #bd00ff;
+    box-shadow: 0 0 15px rgba(189, 0, 255, 0.5);
+    /* Soft neon glow */
+    outline: none !important;
+  }
 }
