@@ -183,7 +183,6 @@ export default function App() {
       }`}>
       {/* Background Noise Texture */}
       <div className="bg-noise pointer-events-none" />
-      <div className="bg-noise pointer-events-none" />
       <Toaster position="top-center" />
 
       <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
