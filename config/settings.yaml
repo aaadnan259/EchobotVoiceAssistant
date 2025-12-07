@@ -11,7 +11,7 @@ voice:
 
 ai:
   provider: "google"
-  llm_model: "gemini-1.5-flash"
+  llm_model: "gemini-flash-latest"
   temperature: 0.7
   max_tokens: 150
 
