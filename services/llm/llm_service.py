@@ -55,28 +55,171 @@ class LLMService:
             return self._get_openai_response(messages, tools)
 
     def _get_google_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
-        if not self.model:
-            return MockMessage("I'm sorry, Google Gemini is not configured correctly.")
-
         try:
-            # Convert OpenAI messages to single prompt or history (simplified for now)
-            # A more robust implementation would map roles: user->user, assistant->model
-            full_prompt = ""
+            # 1. Convert OpenAI messages to Gemini Contents
+            gemini_contents = []
+            system_instruction = None
+            
             for msg in messages:
-                role = msg.get("role", "user")
+                role = msg.get("role")
                 content = msg.get("content", "")
-                full_prompt += f"{role.upper()}: {content}\n"
-            
-            full_prompt += "ASSISTANT:" # Prompt for completion
+                
+                if role == "system":
+                    # Concatenate multiple system messages if present
+                    if system_instruction:
+                        system_instruction += "\n" + content
+                    else:
+                        system_instruction = content
+                
+                elif role == "user":
+                    gemini_contents.append({"role": "user", "parts": [content]})
+                
+                elif role == "assistant":
+                    if msg.get("tool_calls"):
+                        # Reconstruct the assistant's tool use (FunctionCall)
+                        # Structure: role: model, parts: [FunctionCall(...)]
+                        parts = []
+                        for tc in msg.get("tool_calls"):
+                             from google.ai.generativelanguage import FunctionCall
+                             import json
+                             # tc is an object or dict? 'msg' is raw from OpenAI/app, so tool_calls is list of objects usually in app.py logic
+                             # BUT app.py converts it to dict when storing?
+                             # In app.py: messages.append(response_message) where response_message is MockMessage (obj)
+                             # Then later passed back to get_response.
+                             # We need to handle both dict and object.
+                             
+                             fn_name = ""
+                             fn_args = {}
+                             
+                             if isinstance(tc, dict):
+                                 fn_name = tc.get("function", {}).get("name")
+                                 args_str = tc.get("function", {}).get("arguments", "{}")
+                             else:
+                                 fn_name = tc.function.name
+                                 args_str = tc.function.arguments
 
-            response = self.model.generate_content(full_prompt)
+                             try:
+                                 fn_args = json.loads(args_str)
+                             except:
+                                 fn_args = {}
+
+                             parts.append(FunctionCall(name=fn_name, args=fn_args))
+                        
+                        gemini_contents.append({"role": "model", "parts": parts})
+                    else:
+                        # Standard text response
+                        gemini_contents.append({"role": "model", "parts": [content]})
+                
+                elif role == "tool":
+                    # Handle tool output (FunctionResponse)
+                    # output structure: {'function_response': {'name': 'fn_name', 'response': {'result': '...'}}}
+                    function_name = msg.get("name")
+                    # OpenAI passes string content (json usually)
+                    try:
+                        import json
+                        # Try to parse content as JSON so Gemini receives structured data (better)
+                        # Or just pass as string wrapped in dict
+                        result_content = json.loads(content)
+                    except:
+                        result_content = content
+                        
+                    tool_response = {
+                        "function_response": {
+                            "name": function_name,
+                            "response": {"result": result_content} 
+                        }
+                    }
+                    gemini_contents.append({"role": "function", "parts": [tool_response]})
+
+            # 2. Convert Tools
+            gemini_tools = None
+            if tools:
+                gemini_tools = self._convert_tools_to_gemini(tools)
+
+            # 3. Create Model with System Instruction
+            # We instantiate per-request to bind the system prompt correctly
+            model = genai.GenerativeModel(self.model_name, system_instruction=system_instruction)
             
-            # Mimic OpenAI structure
-            return MockMessage(content=response.text, tool_calls=None)
+            # 4. Generate Content
+            # Pass full history as contents
+            response = model.generate_content(gemini_contents, tools=gemini_tools)
+            
+            # 5. Parse Response
+            return self._parse_gemini_response(response)
 
         except Exception as e:
             logger.error(f"Google Gemini Error: {e}", exc_info=True)
             return MockMessage("I'm having trouble thinking with Gemini right now.")
+
+    def _convert_tools_to_gemini(self, openai_tools: List[Dict[str, Any]]) -> Any:
+        # Convert OpenAI tool definitions to Gemini FunctionDeclarations
+        gemini_tools = []
+        for tool in openai_tools:
+            if tool.get("type") == "function":
+                f = tool.get("function", {})
+                gemini_tools.append({
+                    "name": f.get("name"),
+                    "description": f.get("description"),
+                    "parameters": self._convert_schema(f.get("parameters"))
+                })
+        return gemini_tools
+
+    def _convert_schema(self, schema: Dict[str, Any]) -> Dict[str, Any]:
+        """Recursively convert OpenAI JSON schema types to Gemini compatible types (UPPERCASE)."""
+        if not schema:
+            return {}
+        
+        new_schema = schema.copy()
+        
+        # specific fix for 'type'
+        if "type" in new_schema:
+            val = new_schema["type"]
+            if isinstance(val, str):
+                new_schema["type"] = val.upper()
+        
+        # recurse for properties
+        if "properties" in new_schema:
+            new_props = {}
+            for k, v in new_schema["properties"].items():
+                new_props[k] = self._convert_schema(v)
+            new_schema["properties"] = new_props
+            
+        # recurse for items (array)
+        if "items" in new_schema:
+            new_schema["items"] = self._convert_schema(new_schema["items"])
+            
+        return new_schema
+
+    def _parse_gemini_response(self, response) -> MockMessage:
+        # Check for function calls
+        if response.parts:
+            for part in response.parts:
+                if fn := part.function_call:
+                    # Found a function call
+                    import json
+                    import uuid
+                    # Convert args to JSON string as OpenAI expects
+                    # Gemini returns a Map/Dict for args
+                    args = dict(fn.args)
+                    
+                    # Create a mock tool call object
+                    class MockToolCall:
+                        def __init__(self, id, name, args_str):
+                            self.id = id
+                            self.function = type('obj', (object,), {'name': name, 'arguments': args_str})
+                            self.type = 'function'
+
+                    tool_call = MockToolCall(
+                        id=f"call_{uuid.uuid4().hex[:8]}",
+                        name=fn.name,
+                        args_str=json.dumps(args)
+                    )
+                    
+                    return MockMessage(content=None, tool_calls=[tool_call])
+        
+        # Default to text
+        return MockMessage(content=response.text, tool_calls=None)
+
 
     def _get_openai_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
         if not self.client:
