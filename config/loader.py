@@ -28,6 +28,8 @@ class ConfigLoader:
     def _inject_env_vars(cls):
         """Inject sensitive keys from .env into the settings dict."""
         # API Keys
+        if os.getenv("GOOGLE_API_KEY"):
+            cls._settings.setdefault("ai", {})["google_api_key"] = os.getenv("GOOGLE_API_KEY")
         if os.getenv("OPENAI_API_KEY"):
             cls._settings.setdefault("ai", {})["openai_api_key"] = os.getenv("OPENAI_API_KEY")
         if os.getenv("ELEVENLABS_API_KEY"):
@@ -36,6 +38,10 @@ class ConfigLoader:
             cls._settings.setdefault("voice", {})["porcupine_access_key"] = os.getenv("PORCUPINE_ACCESS_KEY")
         if os.getenv("OPENWEATHER_API_KEY"):
             cls._settings.setdefault("plugins", {})["openweather_api_key"] = os.getenv("OPENWEATHER_API_KEY")
+        
+        # Web Config
+        if os.getenv("PORT"):
+            cls._settings.setdefault("web", {})["port"] = int(os.getenv("PORT"))
 
     @classmethod
     def get(cls, path: str, default: Any = None) -> Any:

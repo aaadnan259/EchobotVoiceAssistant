@@ -7,14 +7,14 @@ interface SettingsModalProps {
 }
 
 interface SettingsData {
-    openai_api_key: string;
+    google_api_key: string;
     voice_speed: number;
     wake_word_sensitivity: number;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     const [settings, setSettings] = useState<SettingsData>({
-        openai_api_key: '',
+        google_api_key: '',
         voice_speed: 1.0,
         wake_word_sensitivity: 0.5,
     });
@@ -94,11 +94,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                     {/* API Key */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-400">OpenAI API Key</label>
+                        <label className="text-sm font-medium text-slate-400">Google API Key</label>
                         <input
                             type="password"
-                            value={settings.openai_api_key}
-                            onChange={(e) => handleChange('openai_api_key', e.target.value)}
+                            value={settings.google_api_key}
+                            onChange={(e) => handleChange('google_api_key', e.target.value)}
                             className="w-full px-4 py-2 bg-black/20 border border-white/10 rounded-lg text-white placeholder-white/20 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                             placeholder="sk-..."
                         />

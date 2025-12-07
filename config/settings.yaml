@@ -10,8 +10,8 @@ voice:
   input_device_index: null
 
 ai:
-  provider: "openai"
-  llm_model: "gpt-4o-mini" # User requested model
+  provider: "google"
+  llm_model: "gemini-1.5-flash"
   temperature: 0.7
   max_tokens: 150
 

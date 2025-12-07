@@ -17,3 +17,5 @@ colorama
 pyyaml
 jinja2
 python-multipart
+
+google-generativeai

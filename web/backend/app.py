@@ -83,7 +83,7 @@ async def get_plugins():
 from pydantic import BaseModel
 
 class SettingsUpdate(BaseModel):
-    openai_api_key: str = ""
+    google_api_key: str = ""
     voice_speed: float = 1.0
     wake_word_sensitivity: float = 0.5
 
@@ -96,7 +96,12 @@ async def update_settings(settings: SettingsUpdate):
     # In a real app, we would save this to the yaml file
     # For now, we'll just update the in-memory config
     # ConfigLoader.update(settings.dict())
-    logger.info(f"Settings updated: {settings}")
+    
+    # Redact key for logging
+    settings_safe = settings.dict()
+    settings_safe["google_api_key"] = "REDACTED"
+    logger.info(f"Settings updated: {settings_safe}")
+    
     return {"status": "success", "settings": settings}
 
 @app.websocket("/ws")

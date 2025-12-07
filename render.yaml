@@ -9,5 +9,5 @@ services:
         value: 8000
       - key: WEB_ENABLED
         value: true
-      - key: OPENAI_API_KEY
+      - key: GOOGLE_API_KEY
         sync: false # User must provide this in Render Dashboard
