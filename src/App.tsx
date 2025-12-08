@@ -101,42 +101,62 @@ export default function App() {
       };
 
       socket.onmessage = (event) => {
-        const text = event.data;
+        try {
+          const payload = JSON.parse(event.data);
 
-        // Add bot message
-        const assistantMessage: Message = {
-          id: Date.now().toString(),
-          text,
-          sender: 'assistant',
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, assistantMessage]);
+          if (payload.type === 'error') {
+            toast.error(payload.text);
+            return;
+          }
 
-        // Trigger happy animation
-        setBotState('happy');
-        setTimeout(() => setBotState('idle'), 2000);
+          const text = payload.text;
+          const audioBase64 = payload.audio;
 
-        // Text-to-Speech (Frontend)
-        if ('speechSynthesis' in window) {
-          // Cancel any ongoing speech
-          window.speechSynthesis.cancel();
+          // Add bot message
+          const assistantMessage: Message = {
+            id: Date.now().toString(),
+            text,
+            sender: 'assistant',
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, assistantMessage]);
 
-          const utterance = new SpeechSynthesisUtterance(text);
-          let shouldSpeak = true;
+          // Trigger happy animation
+          setBotState('happy');
+          setTimeout(() => setBotState('idle'), 2000);
 
-          // Get settings
-          const savedSettings = localStorage.getItem('echobot_settings');
-          if (savedSettings) {
-            const settings = JSON.parse(savedSettings);
-            utterance.rate = settings.voice_speed || 1.0;
-            if (settings.voice_enabled !== undefined) {
-              shouldSpeak = settings.voice_enabled;
+          // Audio Playback (Server-Side TTS)
+          if (audioBase64) {
+            const savedSettings = localStorage.getItem('echobot_settings');
+            let shouldSpeak = true;
+
+            if (savedSettings) {
+              const settings = JSON.parse(savedSettings);
+              if (settings.voice_enabled !== undefined) {
+                shouldSpeak = settings.voice_enabled;
+              }
+            }
+
+            if (shouldSpeak) {
+              try {
+                const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+                audio.play();
+              } catch (err) {
+                console.error("Audio playback failed", err);
+              }
             }
           }
 
-          if (shouldSpeak) {
-            window.speechSynthesis.speak(utterance);
-          }
+        } catch (e) {
+          // Fallback for plain text messages (legacy/testing)
+          const text = event.data;
+          const assistantMessage: Message = {
+            id: Date.now().toString(),
+            text,
+            sender: 'assistant',
+            timestamp: new Date(),
+          };
+          setMessages(prev => [...prev, assistantMessage]);
         }
       };
 

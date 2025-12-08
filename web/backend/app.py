@@ -9,7 +9,9 @@ from typing import List
 
 from config.loader import ConfigLoader
 from services.plugin_manager import PluginManager
+from services.audio.tts import TTSEngine
 from utils.logger import logger
+import base64
 
 app = FastAPI(title="EchoBot Web UI")
 
@@ -50,6 +52,7 @@ plugin_manager.load_plugins()
 
 # Initialize AI Services
 llm_service = LLMService()
+tts_engine = TTSEngine()
 # intent_classifier = IntentClassifier() # Deprecated in favor of Function Calling
 
 class ConnectionManager:
@@ -137,7 +140,10 @@ async def websocket_endpoint(websocket: WebSocket):
             
             # Handle Error
             if isinstance(response_message, str):
-                await manager.broadcast(response_message)
+                await manager.broadcast(json.dumps({
+                    "type": "error",
+                    "text": response_message
+                }))
                 continue
 
             response_text = response_message.content
@@ -178,9 +184,23 @@ async def websocket_endpoint(websocket: WebSocket):
                 except Exception as e:
                     logger.error(f"Memory Storage Error: {e}")
             
-            # 8. Send Response
+            # 8. Send Response with Audio
             if response_text:
-                await manager.broadcast(response_text)
+                audio_b64 = None
+                if tts_engine:
+                     try:
+                        audio_bytes = tts_engine.generate_audio_bytes(response_text)
+                        if audio_bytes:
+                            audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                     except Exception as e:
+                        logger.error(f"TTS Error: {e}")
+
+                payload = {
+                     "type": "audio",
+                     "text": response_text,
+                     "audio": audio_b64
+                }
+                await manager.broadcast(json.dumps(payload))
             
     except Exception as e:
         logger.error(f"WebSocket error: {e}")

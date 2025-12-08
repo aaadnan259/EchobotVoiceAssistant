@@ -29,7 +29,7 @@ class MemoryService:
         try:
             self.collection.add(
                 documents=[text],
-                metadatas=[metadata or {}],
+                metadatas=[metadata or {"type": "memory"}],
                 ids=[doc_id]
             )
             logger.debug(f"Memory added: {text[:30]}...")

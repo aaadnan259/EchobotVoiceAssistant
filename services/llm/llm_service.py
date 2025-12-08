@@ -148,6 +148,9 @@ class LLMService:
             return self._parse_gemini_response(response)
 
         except Exception as e:
+            import sys
+            sys.stderr.write(f"DEBUG EXCEPTION: {e}\n")
+            sys.stderr.flush()
             logger.error(f"Google Gemini Error: {e}", exc_info=True)
             return MockMessage("I'm having trouble thinking with Gemini right now.")
 

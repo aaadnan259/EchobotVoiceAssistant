@@ -51,12 +51,30 @@ class TTSEngine:
 
         logger.info(f"Streaming TTS for: {text}")
         try:
-            audio_stream = self.client.generate(
+            audio_stream = self.client.text_to_speech.convert(
                 text=text,
-                voice=self.voice_id,
-                model=self.model_id,
+                voice_id=self.voice_id,
+                model_id=self.model_id,
                 stream=True
             )
             stream(audio_stream)
         except Exception as e:
             logger.error(f"ElevenLabs Streaming Error: {e}")
+
+    def generate_audio_bytes(self, text: str) -> bytes:
+        """Generate audio bytes from ElevenLabs."""
+        if not self.client or not self.voice_id:
+            logger.warning("TTS not configured or voice not found.")
+            return b""
+
+        logger.info(f"Generating TTS for: {text}")
+        try:
+            audio = self.client.text_to_speech.convert(
+                text=text,
+                voice_id=self.voice_id,
+                model_id=self.model_id
+            )
+            return b"".join(audio) if hasattr(audio, '__iter__') and not isinstance(audio, (bytes, bytearray)) else audio
+        except Exception as e:
+            logger.error(f"ElevenLabs Generation Error: {e}")
+            return b""

@@ -1,5 +1,5 @@
 import { Mic, MicOff, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
-import echobotLogo from '../assets/echobot-logo.png';
+import echobotLogo from '../assets/echobot-logo-transparent.png';
 
 interface TopBarProps {
   isMicActive: boolean;
@@ -30,7 +30,8 @@ export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle, isVoice
           <img
             src={echobotLogo}
             alt="EchoBot Logo"
-            className="w-10 h-10 rounded-full shadow-lg shadow-indigo-500/20 object-cover"
+            className="w-10 h-10 rounded-full shadow-lg shadow-indigo-500/30 object-cover bg-gradient-to-br from-indigo-500/20 to-purple-600/20 backdrop-blur-sm"
+
           />
           <span className="text-slate-900 dark:text-white font-medium tracking-wide text-lg">EchoBot</span>
         </div>
