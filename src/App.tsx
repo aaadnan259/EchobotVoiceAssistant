@@ -13,7 +13,7 @@ export interface Message {
   timestamp: Date;
 }
 
-type BotState = 'idle' | 'typing' | 'processing' | 'listening' | 'happy';
+type BotState = 'idle' | 'typing' | 'processing' | 'listening' | 'happy' | 'speaking';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([
@@ -36,6 +36,7 @@ export default function App() {
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const ws = useRef<WebSocket | null>(null);
   const hasConnected = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Theme & Settings Persistence
   useEffect(() => {
@@ -55,6 +56,14 @@ export default function App() {
         setIsVoiceEnabled(voice_enabled);
       }
     }
+
+    // Cleanup audio on unmount
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
   }, []);
 
   const toggleTheme = () => {
@@ -74,6 +83,9 @@ export default function App() {
 
     if (!newState) {
       window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
     }
     toast.info(newState ? 'Voice output enabled' : 'Voice output disabled');
   };
@@ -121,30 +133,64 @@ export default function App() {
           };
           setMessages(prev => [...prev, assistantMessage]);
 
-          // Trigger happy animation
-          setBotState('happy');
-          setTimeout(() => setBotState('idle'), 2000);
-
-          // Audio Playback (Server-Side TTS)
-          if (audioBase64) {
-            const savedSettings = localStorage.getItem('echobot_settings');
-            let shouldSpeak = true;
-
-            if (savedSettings) {
-              const settings = JSON.parse(savedSettings);
-              if (settings.voice_enabled !== undefined) {
-                shouldSpeak = settings.voice_enabled;
-              }
+          // Check voice settings
+          const savedSettings = localStorage.getItem('echobot_settings');
+          let shouldSpeak = isVoiceEnabled; // Default to state
+          if (savedSettings) {
+            const settings = JSON.parse(savedSettings);
+            if (settings.voice_enabled !== undefined) {
+              shouldSpeak = settings.voice_enabled;
             }
+          }
 
-            if (shouldSpeak) {
+          if (shouldSpeak) {
+            // 1. Try Server-Side Audio
+            if (audioBase64) {
               try {
+                if (audioRef.current) {
+                  audioRef.current.pause();
+                }
                 const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
-                audio.play();
+                audioRef.current = audio;
+
+                audio.onplay = () => setBotState('speaking');
+                audio.onended = () => setBotState('idle');
+                audio.onerror = () => {
+                  console.error("Audio playback error");
+                  setBotState('idle');
+                };
+
+                audio.play().catch(e => {
+                  console.error("Autoplay likely blocked:", e);
+                  setBotState('idle');
+                });
+
               } catch (err) {
                 console.error("Audio playback failed", err);
               }
             }
+            // 2. Fallback to Browser Speech Synthesis
+            else {
+              // Only if audio was expected but missing (or just text response)
+              // For "consistency", let's use browser voice if server voice isn't there
+              window.speechSynthesis.cancel();
+              const utterance = new SpeechSynthesisUtterance(text);
+
+              // Try to find a nice voice
+              const voices = window.speechSynthesis.getVoices();
+              const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Samantha"));
+              if (preferredVoice) utterance.voice = preferredVoice;
+
+              utterance.onstart = () => setBotState('speaking');
+              utterance.onend = () => setBotState('idle');
+              utterance.onerror = () => setBotState('idle');
+
+              window.speechSynthesis.speak(utterance);
+            }
+          } else {
+            // Visual feedback only if voice disabled
+            setBotState('happy');
+            setTimeout(() => setBotState('idle'), 2000);
           }
 
         } catch (e) {

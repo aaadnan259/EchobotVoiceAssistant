@@ -16,9 +16,17 @@ class TTSEngine:
         self.voice_id = self._get_voice_id(self.voice_name)
         self.model_id = ConfigLoader.get("voice.tts_model_id", "eleven_turbo_v2_5")
 
+    @property
+    def is_available(self) -> bool:
+        """Check if TTS is configured and ready."""
+        return self.client is not None and self.voice_id is not None
+
     def _get_voice_id(self, voice_name: str) -> str:
         """Dynamically lookup voice ID by name."""
         try:
+            if not self.client:
+                return None
+                
             logger.info(f"Looking up voice ID for: {voice_name}")
             response = self.client.voices.get_all()
             
@@ -36,7 +44,10 @@ class TTSEngine:
                     return voice.voice_id
             
             # Ultimate fallback if even default isn't found (unlikely)
-            return response.voices[0].voice_id
+            if response.voices:
+                return response.voices[0].voice_id
+            
+            return None
 
         except Exception as e:
             logger.error(f"Failed to fetch voices: {e}")
@@ -45,7 +56,7 @@ class TTSEngine:
 
     def speak_stream(self, text: str):
         """Stream audio from ElevenLabs."""
-        if not self.client or not self.voice_id:
+        if not self.is_available:
             logger.warning("TTS not configured or voice not found.")
             return
 
@@ -63,7 +74,7 @@ class TTSEngine:
 
     def generate_audio_bytes(self, text: str) -> bytes:
         """Generate audio bytes from ElevenLabs."""
-        if not self.client or not self.voice_id:
+        if not self.is_available:
             logger.warning("TTS not configured or voice not found.")
             return b""
 

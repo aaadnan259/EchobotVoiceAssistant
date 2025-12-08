@@ -1,5 +1,5 @@
 openai
-elevenlabs
+elevenlabs>=1.0.0
 spacy
 nltk
 python-dotenv

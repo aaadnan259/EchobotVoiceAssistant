@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion, Variants, useSpring, useMotionValue } from 'framer-motion';
 
 interface BotCharacterProps {
-  state: 'idle' | 'typing' | 'processing' | 'listening' | 'happy';
+  state: 'idle' | 'typing' | 'processing' | 'listening' | 'happy' | 'speaking';
   audioLevel?: number;
 }
 
@@ -28,7 +28,7 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       // Only track in idle or listening states
-      if (state !== 'idle' && state !== 'listening') {
+      if (state !== 'idle' && state !== 'listening' && state !== 'speaking') {
         mouseX.set(0);
         mouseY.set(0);
         return;
@@ -83,7 +83,7 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
 
   // Reset eyes when state changes to non-tracking
   useEffect(() => {
-    if (state !== 'idle' && state !== 'listening') {
+    if (state !== 'idle' && state !== 'listening' && state !== 'speaking') {
       mouseX.set(0);
       mouseY.set(0);
     }
@@ -153,6 +153,15 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
         repeat: 3, // Bounce 3 times
         ease: "easeOut"
       }
+    },
+    speaking: {
+      scale: [1, 1.05, 1],
+      transition: {
+        duration: 0.2, // Fast pulse
+        repeat: Infinity,
+        repeatType: "reverse",
+        ease: "easeInOut"
+      }
     }
   };
 
@@ -162,7 +171,8 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
     listening: { scale: 1.1 },
     processing: { y: -8 }, // Look up
     typing: { y: 4 }, // Look down
-    happy: { scale: 1.1 }
+    happy: { scale: 1.1 },
+    speaking: { scale: 1.05 }
   };
 
   // Individual Eye Variants
@@ -176,7 +186,12 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
     listening: { height: 28, width: 20 },
     processing: { height: 12 },
     typing: { height: 24 },
-    happy: { height: 4, width: 24, borderRadius: 2 }
+    happy: { height: 4, width: 24, borderRadius: 2 },
+    speaking: {
+      height: [20, 24, 20],
+      width: 18,
+      transition: { duration: 0.2, repeat: Infinity }
+    }
   };
 
   const rightEyeVariants: Variants = {
@@ -189,7 +204,12 @@ export const BotCharacter: React.FC<BotCharacterProps> = ({ state, audioLevel = 
     listening: { height: 28, width: 20 },
     processing: { height: 12 },
     typing: { height: 24 },
-    happy: { height: 4, width: 24, borderRadius: 2 }
+    happy: { height: 4, width: 24, borderRadius: 2 },
+    speaking: {
+      height: [20, 24, 20],
+      width: 18,
+      transition: { duration: 0.2, repeat: Infinity }
+    }
   };
 
   return (

@@ -187,13 +187,16 @@ async def websocket_endpoint(websocket: WebSocket):
             # 8. Send Response with Audio
             if response_text:
                 audio_b64 = None
-                if tts_engine:
+                if tts_engine and tts_engine.is_available:
                      try:
                         audio_bytes = tts_engine.generate_audio_bytes(response_text)
                         if audio_bytes:
                             audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
                      except Exception as e:
                         logger.error(f"TTS Error: {e}")
+                elif tts_engine and not tts_engine.is_available:
+                    # Optional: Could signal frontend that TTS is unavailable configuration-wise
+                    pass
 
                 payload = {
                      "type": "audio",
