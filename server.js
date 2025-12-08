@@ -20,7 +20,7 @@ app.use((req, res, next) => {
 app.use('/api', chatRoutes);
 
 // SPA Fallback
-app.get('*', (req, res) => {
+app.get('/(.*)', (req, res) => {
     res.sendFile('index.html', { root: 'build' });
 });
 
