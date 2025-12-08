@@ -100,7 +100,7 @@ export default function App() {
       // In development, we might be on port 5173 (Vite) but backend is 8000
       // In production, they are likely on the same port/domain
       const wsUrl = import.meta.env.DEV
-        ? `ws://${host}:8000/ws`
+        ? `ws://${host}:3001/ws`
         : `${protocol}//${host}${port}/ws`;
 
       const socket = new WebSocket(wsUrl);

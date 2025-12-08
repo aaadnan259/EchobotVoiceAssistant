@@ -136,7 +136,7 @@ async def websocket_endpoint(websocket: WebSocket):
             tools = plugin_manager.get_tool_definitions()
             
             # 4. First LLM Call
-            response_message = llm_service.get_response(messages, tools=tools)
+            response_message = await asyncio.to_thread(llm_service.get_response, messages, tools=tools)
             
             # Handle Error
             if isinstance(response_message, str):
@@ -158,7 +158,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     arguments = json.loads(tool_call.function.arguments)
                     
                     logger.info(f"Executing tool: {function_name} with args: {arguments}")
-                    result = plugin_manager.execute_tool(function_name, arguments)
+                    result = await asyncio.to_thread(plugin_manager.execute_tool, function_name, arguments)
                     
                     # Append tool result to history
                     messages.append({
@@ -170,7 +170,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # 6. Second LLM Call (Final Answer)
                 # We don't pass tools here to force a text response, or we could if we want multi-step
-                final_response = llm_service.get_response(messages)
+                final_response = await asyncio.to_thread(llm_service.get_response, messages)
                 if isinstance(final_response, str):
                     response_text = final_response
                 else:
@@ -189,7 +189,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 audio_b64 = None
                 if tts_engine and tts_engine.is_available:
                      try:
-                        audio_bytes = tts_engine.generate_audio_bytes(response_text)
+                        audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, response_text)
                         if audio_bytes:
                             audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
                      except Exception as e:

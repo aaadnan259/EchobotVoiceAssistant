@@ -6,28 +6,32 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Stage 2: Node.js Backend
-FROM node:20-alpine
+# Stage 2: Python Backend
+FROM python:3.11-slim
+
 WORKDIR /app
 
-COPY package*.json ./
-# Install production dependencies only
-RUN npm ci --omit=dev
+# Install system dependencies if needed (e.g. for audio)
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy backend source
-COPY server.js .
-COPY services ./services
-COPY routes ./routes
+# Copy requirements
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY . .
 
 # Copy built frontend from Stage 1
 COPY --from=frontend-build /app/build ./build
 
 # Environment Variables
-ENV NODE_ENV=production
+ENV PYTHONUNBUFFERED=1
 ENV PORT=3000
 
 # Expose Port
 EXPOSE 3000
 
-# Run Command
-CMD ["npm", "start"]
+# Run Command (Uses PORT env var)
+CMD ["python", "main.py"]
