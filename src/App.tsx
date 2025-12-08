@@ -25,26 +25,57 @@ export default function App() {
     },
   ]);
   const [isMicActive, setIsMicActive] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('echobot_theme') as 'dark' | 'light') || 'dark';
+    }
+    return 'dark';
+  });
   const [botState, setBotState] = useState<BotState>('idle');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const ws = useRef<WebSocket | null>(null);
   const hasConnected = useRef(false);
 
-  // Theme Persistence
+  // Theme & Settings Persistence
   useEffect(() => {
-    const savedTheme = localStorage.getItem('echobot_theme') as 'dark' | 'light';
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('echobot_theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    // Initial load logic if needed, or just let the main effect handle it.
+    // We already init state so the effect above runs on mount.
+
+    // Load Voice Settings
+    const savedSettings = localStorage.getItem('echobot_settings');
+    if (savedSettings) {
+      const { voice_enabled } = JSON.parse(savedSettings);
+      if (voice_enabled !== undefined) {
+        setIsVoiceEnabled(voice_enabled);
+      }
     }
   }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-    localStorage.setItem('echobot_theme', newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  };
+
+  const toggleVoice = () => {
+    const newState = !isVoiceEnabled;
+    setIsVoiceEnabled(newState);
+
+    // Update localStorage for persistence and for the receive handler to see
+    const savedSettings = localStorage.getItem('echobot_settings');
+    const settings = savedSettings ? JSON.parse(savedSettings) : {};
+    settings.voice_enabled = newState;
+    localStorage.setItem('echobot_settings', JSON.stringify(settings));
+
+    if (!newState) {
+      window.speechSynthesis.cancel();
+    }
+    toast.info(newState ? 'Voice output enabled' : 'Voice output disabled');
   };
 
   // WebSocket Connection
@@ -91,15 +122,21 @@ export default function App() {
           window.speechSynthesis.cancel();
 
           const utterance = new SpeechSynthesisUtterance(text);
+          let shouldSpeak = true;
 
-          // Get speed from settings (default 1.0)
+          // Get settings
           const savedSettings = localStorage.getItem('echobot_settings');
           if (savedSettings) {
-            const { voice_speed } = JSON.parse(savedSettings);
-            utterance.rate = voice_speed || 1.0;
+            const settings = JSON.parse(savedSettings);
+            utterance.rate = settings.voice_speed || 1.0;
+            if (settings.voice_enabled !== undefined) {
+              shouldSpeak = settings.voice_enabled;
+            }
           }
 
-          window.speechSynthesis.speak(utterance);
+          if (shouldSpeak) {
+            window.speechSynthesis.speak(utterance);
+          }
         }
       };
 
@@ -197,6 +234,8 @@ export default function App() {
             onMicToggle={toggleMic}
             theme={theme}
             onThemeToggle={toggleTheme}
+            isVoiceEnabled={isVoiceEnabled}
+            onVoiceToggle={toggleVoice}
           />
         </div>
 

@@ -112,7 +112,7 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
             onFocus={() => onTypingStateChange(true)}
             onBlur={() => onTypingStateChange(false)}
             placeholder="Ask me anything…"
-            className="flex-1 bg-transparent text-white placeholder-white/60 outline-none text-lg py-3"
+            className="flex-1 bg-transparent text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/60 outline-none text-lg py-3"
           />
 
           {/* Action Buttons */}
@@ -123,7 +123,7 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
               onClick={onMicClick}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 ${isMicActive
                 ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse'
-                : 'bg-white/5 hover:bg-white/10 text-white/70 hover:text-white'
+                : 'bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 text-gray-600 dark:text-white/70 hover:text-black dark:hover:text-white'
                 }`}
               aria-label="Voice input"
             >

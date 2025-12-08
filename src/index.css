@@ -110,39 +110,63 @@
 
   /* Chat Input Custom Styles */
   /* Chat Input Custom Styles - Nuclear Option */
+  /* Chat Input Custom Styles */
+
+  /* Base (Light Mode) */
   .chat-input {
-    /* Force the background to be the dark gradient */
-    background: linear-gradient(135deg, rgba(40, 20, 60, 0.9), rgba(20, 20, 50, 0.9)) !important;
-    border: 2px solid rgba(138, 43, 226, 0.3);
-    color: white !important;
+    background: rgba(255, 255, 255, 0.8) !important;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    color: #1f2937 !important;
+    /* gray-900 */
     border-radius: 25px;
     padding: 10px 20px;
-    /* Adjusted padding to fit buttons */
     width: 100%;
 
-    /* Remove all browser defaults */
     appearance: none;
     -webkit-appearance: none;
     outline: none !important;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
   }
 
+  /* Dark Mode - The "Nuclear Option" */
+  :is(.dark .chat-input) {
+    background: linear-gradient(135deg, rgba(40, 20, 60, 0.9), rgba(20, 20, 50, 0.9)) !important;
+    border: 2px solid rgba(138, 43, 226, 0.3);
+    color: white !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+
   .chat-input:focus-within {
+    border-color: #6366f1 !important;
+    /* Indigo-500 for light */
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.3) !important;
+  }
+
+  :is(.dark .chat-input:focus-within) {
     border-color: #bd00ff !important;
     box-shadow: 0 0 15px rgba(189, 0, 255, 0.5) !important;
   }
 
-  /* THE FIX: Stop Chrome from turning it white on Autofill */
-  /* Target the input inside the chat-input container */
+  /* Autofill Fixes */
   .chat-input input:-webkit-autofill,
   .chat-input input:-webkit-autofill:hover,
   .chat-input input:-webkit-autofill:focus,
   .chat-input input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px rgb(30, 20, 50) inset !important;
-    /* Matches dark theme */
-    -webkit-text-fill-color: white !important;
     transition: background-color 5000s ease-in-out 0s;
+  }
+
+  /* Dark Mode Autofill */
+  :is(.dark .chat-input input:-webkit-autofill) {
+    -webkit-box-shadow: 0 0 0 30px rgb(30, 20, 50) inset !important;
+    -webkit-text-fill-color: white !important;
     caret-color: white;
+  }
+
+  /* Light Mode Autofill */
+  :is(.chat-input input:-webkit-autofill) {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: black !important;
+    caret-color: black;
   }
 }

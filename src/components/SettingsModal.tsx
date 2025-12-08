@@ -10,6 +10,7 @@ interface SettingsData {
     google_api_key: string;
     voice_speed: number;
     wake_word_sensitivity: number;
+    voice_enabled?: boolean;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
@@ -17,6 +18,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         google_api_key: '',
         voice_speed: 1.0,
         wake_word_sensitivity: 0.5,
+        voice_enabled: true,
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         }
     }, [isOpen]);
 
-    const handleChange = (field: keyof SettingsData, value: string | number) => {
+    const handleChange = (field: keyof SettingsData, value: string | number | boolean) => {
         setSettings(prev => ({ ...prev, [field]: value }));
     };
 
