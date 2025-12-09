@@ -12,58 +12,27 @@ class TTSEngine:
             return
 
         self.client = ElevenLabs(api_key=self.api_key)
-        self.voice_name = ConfigLoader.get("voice.voice_name", "Valerie")
-        self.model_id = ConfigLoader.get("voice.tts_model_id", "eleven_turbo_v2_5")
         
-        # --- FIX STARTS HERE ---
-        # 1. Try to get the specific Voice ID from settings first
-        self.voice_id = ConfigLoader.get("voice.tts_voice_id")
+        # STRICT CONFIGURATION FOR PRODUCTION
+        # Target: Tarquin
+        self.voice_id = "7cOBG34AiHrAzs842Rdi" 
         
-        # 2. If no ID is configured, try to look it up by name
-        if not self.voice_id:
-            logger.info(f"No Voice ID in settings, looking up voice by name: {self.voice_name}")
-            self.voice_id = self._get_voice_id(self.voice_name)
-        else:
-            logger.info(f"Using configured Voice ID directly: {self.voice_id}")
-        # --- FIX ENDS HERE ---
+        # Override if config provides something else, but default to Tarquin hardcoded
+        config_id = ConfigLoader.get("voice.tts_voice_id")
+        if config_id:
+             self.voice_id = config_id
+
+        self.model_id = ConfigLoader.get("voice.tts_model_id", "eleven_turbo_v2")
+        
+        logger.info(f"TTS Initialized. Voice ID: {self.voice_id} (Model: {self.model_id})")
 
     @property
     def is_available(self) -> bool:
         """Check if TTS is configured and ready."""
         return self.client is not None and self.voice_id is not None
+        
+    # Dynamic lookup removed for production stability
 
-    def _get_voice_id(self, voice_name: str) -> str:
-        """Dynamically lookup voice ID by name."""
-        try:
-            if not self.client:
-                return None
-                
-            logger.info(f"Looking up voice ID for: {voice_name}")
-            response = self.client.voices.get_all()
-            
-            # Iterate through voices to find a match
-            for voice in response.voices:
-                if voice.name.lower() == voice_name.lower():
-                    logger.info(f"Found voice ID for {voice_name}: {voice.voice_id}")
-                    return voice.voice_id
-            
-            logger.warning(f"Voice '{voice_name}' not found. Falling back to default.")
-            # Fallback to a known default or the first available
-            default_voice = "Rachel"
-            for voice in response.voices:
-                if voice.name == default_voice:
-                    return voice.voice_id
-            
-            # Ultimate fallback if even default isn't found (unlikely)
-            if response.voices:
-                return response.voices[0].voice_id
-            
-            return None
-
-        except Exception as e:
-            logger.error(f"Failed to fetch voices: {e}")
-            # Return configured ID as fallback if dynamic lookup fails
-            return ConfigLoader.get("voice.tts_voice_id", "21m00Tcm4TlvDq8ikWAM")
 
     def speak_stream(self, text: str):
         """Stream audio from ElevenLabs."""
