@@ -8,9 +8,10 @@ from utils.logger import logger
 from services.audio.tts import TTSEngine
 
 class VoiceEngine:
-    def __init__(self):
+    def __init__(self, status_callback=None):
         self.recognizer = sr.Recognizer()
         self.microphone = sr.Microphone()
+        self.status_callback = status_callback
         
         # TTS Setup
         self.tts = TTSEngine()
@@ -36,39 +37,59 @@ class VoiceEngine:
             except Exception as e:
                 logger.error(f"Failed to init Porcupine: {e}")
 
+    def _emit_status(self, status: str, **kwargs):
+        if self.status_callback:
+            try:
+                self.status_callback(status, **kwargs)
+            except Exception as e:
+                logger.error(f"Error in status callback: {e}")
+
     def listen(self, timeout=5, phrase_time_limit=10):
         """Listen for voice input."""
         with self.microphone as source:
             logger.info("Listening...")
+            self._emit_status("listening")
             self.recognizer.adjust_for_ambient_noise(source)
             try:
                 audio = self.recognizer.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
+                self._emit_status("processing")
                 text = self.recognizer.recognize_google(audio)
                 logger.info(f"Heard: {text}")
                 return text
             except sr.WaitTimeoutError:
+                self._emit_status("idle")
                 return None
             except sr.UnknownValueError:
+                self._emit_status("idle")
                 return None
             except Exception as e:
                 logger.error(f"STT Error: {e}")
+                self._emit_status("idle")
                 return None
 
     def speak(self, text: str):
         """Convert text to speech using ElevenLabs streaming."""
+        self._emit_status("speaking")
+        # Note: True streaming audio status might be handled by the caller or TTS engine events
         self.tts.speak_stream(text)
+        self._emit_status("idle")
 
     def wait_for_wake_word(self):
         """Block until wake word is detected."""
         if not self.porcupine:
-            logger.warning("Wake word not configured. Skipping.")
-            return True
+            # logger.warning("Wake word not configured. Skipping.")
+            import time
+            time.sleep(5) # Sleep to prevent busy loop
+            return False # Return False so we don't proceed to listen()
 
         logger.info("Waiting for wake word...")
+        # We might want to signal idle here?
+        # self._emit_status("idle") 
         while True:
             pcm = self.audio_stream.read(self.porcupine.frame_length)
             pcm = struct.unpack_from("h" * self.porcupine.frame_length, pcm)
             keyword_index = self.porcupine.process(pcm)
             if keyword_index >= 0:
                 logger.info("Wake word detected!")
+                self._emit_status("listening") # transition effectively
                 return True

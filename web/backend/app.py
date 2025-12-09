@@ -5,13 +5,17 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json
 import asyncio
+import threading
 from typing import List
+import os
+import base64
 
 from config.loader import ConfigLoader
 from services.plugin_manager import PluginManager
 from services.audio.tts import TTSEngine
+from services.audio.voice_engine import VoiceEngine
 from utils.logger import logger
-import base64
+from services.llm.llm_service import LLMService
 
 app = FastAPI(title="EchoBot Web UI")
 
@@ -24,27 +28,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import os
-
 # Static & Templates
-# Get absolute path to the 'web' directory
 current_dir = os.path.dirname(os.path.abspath(__file__)) # web/backend
 web_dir = os.path.dirname(current_dir) # web
 project_root = os.path.dirname(web_dir) # EchoBot root
-dist_dir = os.path.join(project_root, "build") # Vite outputs to 'build' in root
+dist_dir = os.path.join(project_root, "build") # Vite outputs to 'build' by default?? Or dist?
+# Note: User instructions said 'dist/' usually. Checking Step 4, build dir exists.
+# Vite default is dist, but user might have changed it. 
+# Step 4 showed 'build' dir. I'll assume 'build' or 'dist'.
+# Let's check if 'dist' exists in root? Step 4 only showed 'build' folder.
+# So I'll stick to 'build' if passing to checking.
+if not os.path.exists(dist_dir):
+    dist_dir = os.path.join(project_root, "dist") # Fallback
 
-# Serve React Static Files (Production)
 if os.path.exists(dist_dir):
     app.mount("/assets", StaticFiles(directory=os.path.join(dist_dir, "assets")), name="assets")
-    # We don't mount "/" to StaticFiles directly to allow API routes to work.
-    # Instead we serve index.html in the root catch-all.
 else:
-    # Fallback for dev mode or if build is missing
+    # Fallback/Dev
     app.mount("/static", StaticFiles(directory=os.path.join(web_dir, "static")), name="static")
     templates = Jinja2Templates(directory=os.path.join(web_dir, "templates"))
-
-from services.llm.llm_service import LLMService
-# from services.ml.intent_classifier import IntentClassifier
 
 # Global Managers
 plugin_manager = PluginManager()
@@ -53,7 +55,7 @@ plugin_manager.load_plugins()
 # Initialize AI Services
 llm_service = LLMService()
 tts_engine = TTSEngine()
-# intent_classifier = IntentClassifier() # Deprecated in favor of Function Calling
+voice_engine = None
 
 class ConnectionManager:
     def __init__(self):
@@ -71,6 +73,149 @@ class ConnectionManager:
             await connection.send_text(message)
 
 manager = ConnectionManager()
+
+# --- Voice Loop Integration ---
+
+def run_voice_loop(loop):
+    """Refactored voice loop to run in thread."""
+    global voice_engine
+    if not voice_engine:
+        return
+
+    while True:
+        try:
+            if voice_engine.wait_for_wake_word():
+                 # Status 'listening' emitted by engine callback
+                 text = voice_engine.listen()
+                 if text:
+                     # Status 'processing' emitted by engine callback
+                     
+                     # Process Command
+                     asyncio.run_coroutine_threadsafe(process_user_request(text), loop)
+        except Exception as e:
+            logger.error(f"Voice Loop Error: {e}")
+            # Prevent rapid loop on error
+            import time
+            time.sleep(1)
+
+@app.on_event("startup")
+async def startup_event():
+    global voice_engine
+    loop = asyncio.get_running_loop()
+
+    def status_callback(status, **kwargs):
+        payload = {"status": status, **kwargs}
+        if manager.active_connections:
+             # Broadcast status to UI
+             asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
+
+    try:
+        voice_engine = VoiceEngine(status_callback=status_callback)
+        # Start Voice Thread
+        t = threading.Thread(target=run_voice_loop, args=(loop,), daemon=True)
+        t.start()
+        logger.info("Voice Input Thread Started")
+    except Exception as e:
+        logger.error(f"Failed to start voice engine: {e}")
+
+# --- Core Processing Logic ---
+
+async def process_user_request(user_text: str):
+    logger.info(f"Processing: {user_text}")
+    
+    # 1. Prepare Context (RAG)
+    memory_context = ""
+    if llm_service.memory_service:
+        try:
+            relevant_memories = await asyncio.to_thread(llm_service.memory_service.query, user_text)
+            if relevant_memories:
+                memory_context = f"\n\nRelevant Past Memories:\n{relevant_memories}"
+                # logger.info(f"Retrieved Memory: {relevant_memories[:50]}...")
+        except Exception as e:
+            logger.error(f"Memory Retrieval Error: {e}")
+
+    # 2. Construct Messages
+    messages = [
+        {"role": "system", "content": f"You are EchoBot, a helpful and witty AI assistant.{memory_context}"},
+        {"role": "user", "content": user_text}
+    ]
+    
+    # 3. Get Tools
+    tools = plugin_manager.get_tool_definitions()
+    
+    # 4. First LLM Call
+    response_message = await asyncio.to_thread(llm_service.get_response, messages, tools=tools)
+    
+    # Handle Error
+    if isinstance(response_message, str):
+        await manager.broadcast(json.dumps({
+            "type": "error",
+            "text": response_message
+        }))
+        return
+
+    response_text = response_message.content
+
+    # 5. Handle Tool Calls
+    if response_message.tool_calls:
+        messages.append(response_message)
+        
+        for tool_call in response_message.tool_calls:
+            function_name = tool_call.function.name
+            arguments = json.loads(tool_call.function.arguments)
+            
+            logger.info(f"Executing tool: {function_name} with args: {arguments}")
+            result = await asyncio.to_thread(plugin_manager.execute_tool, function_name, arguments)
+            
+            messages.append({
+                "tool_call_id": tool_call.id,
+                "role": "tool",
+                "name": function_name,
+                "content": str(result)
+            })
+        
+        # 6. Second LLM Call
+        final_response = await asyncio.to_thread(llm_service.get_response, messages)
+        if isinstance(final_response, str):
+            response_text = final_response
+        else:
+            response_text = final_response.content
+
+    # 7. Store Interaction (Memory)
+    if llm_service.memory_service and response_text:
+        try:
+            full_exchange = f"User: {user_text}\nAssistant: {response_text}"
+            # await asyncio.to_thread(llm_service.memory_service.add, full_exchange) 
+            # Assuming sync memory service
+            llm_service.memory_service.add(full_exchange)
+        except Exception as e:
+            logger.error(f"Memory Storage Error: {e}")
+    
+    # 8. Send Response with Audio
+    if response_text:
+        audio_b64 = None
+        if tts_engine and tts_engine.is_available:
+                try:
+                    # Notify UI we are speaking (pre-buffer)
+                    await manager.broadcast(json.dumps({"status": "speaking"}))
+                    audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, response_text)
+                    if audio_bytes:
+                        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                except Exception as e:
+                    logger.error(f"TTS Error: {e}")
+        
+        payload = {
+                "type": "audio",
+                "text": response_text,
+                "audio": audio_b64
+        }
+        await manager.broadcast(json.dumps(payload))
+        # After audio sent, frontend handles 'idle' when playback finishes
+        # But we can also set idle here if no audio?
+        if not audio_b64:
+             await manager.broadcast(json.dumps({"status": "idle"}))
+
+# --- Routes ---
 
 @app.get("/")
 async def get(request: Request):
@@ -96,15 +241,9 @@ async def get_settings():
 
 @app.post("/api/settings")
 async def update_settings(settings: SettingsUpdate):
-    # In a real app, we would save this to the yaml file
-    # For now, we'll just update the in-memory config
-    # ConfigLoader.update(settings.dict())
-    
-    # Redact key for logging
     settings_safe = settings.dict()
     settings_safe["google_api_key"] = "REDACTED"
     logger.info(f"Settings updated: {settings_safe}")
-    
     return {"status": "success", "settings": settings}
 
 @app.websocket("/ws")
@@ -114,96 +253,7 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             user_text = await websocket.receive_text()
             logger.info(f"Web User: {user_text}")
-            
-            # 1. Prepare Context (RAG)
-            memory_context = ""
-            if llm_service.memory_service:
-                try:
-                    relevant_memories = llm_service.memory_service.query(user_text)
-                    if relevant_memories:
-                        memory_context = f"\n\nRelevant Past Memories:\n{relevant_memories}"
-                        logger.info(f"Retrieved Memory: {relevant_memories[:50]}...")
-                except Exception as e:
-                    logger.error(f"Memory Retrieval Error: {e}")
-
-            # 2. Construct Messages
-            messages = [
-                {"role": "system", "content": f"You are EchoBot, a helpful and witty AI assistant.{memory_context}"},
-                {"role": "user", "content": user_text}
-            ]
-            
-            # 3. Get Tools
-            tools = plugin_manager.get_tool_definitions()
-            
-            # 4. First LLM Call
-            response_message = await asyncio.to_thread(llm_service.get_response, messages, tools=tools)
-            
-            # Handle Error
-            if isinstance(response_message, str):
-                await manager.broadcast(json.dumps({
-                    "type": "error",
-                    "text": response_message
-                }))
-                continue
-
-            response_text = response_message.content
-
-            # 5. Handle Tool Calls
-            if response_message.tool_calls:
-                # Append the assistant's tool call message to history
-                messages.append(response_message)
-                
-                for tool_call in response_message.tool_calls:
-                    function_name = tool_call.function.name
-                    arguments = json.loads(tool_call.function.arguments)
-                    
-                    logger.info(f"Executing tool: {function_name} with args: {arguments}")
-                    result = await asyncio.to_thread(plugin_manager.execute_tool, function_name, arguments)
-                    
-                    # Append tool result to history
-                    messages.append({
-                        "tool_call_id": tool_call.id,
-                        "role": "tool",
-                        "name": function_name,
-                        "content": str(result)
-                    })
-                
-                # 6. Second LLM Call (Final Answer)
-                # We don't pass tools here to force a text response, or we could if we want multi-step
-                final_response = await asyncio.to_thread(llm_service.get_response, messages)
-                if isinstance(final_response, str):
-                    response_text = final_response
-                else:
-                    response_text = final_response.content
-
-            # 7. Store Interaction (Memory)
-            if llm_service.memory_service and response_text:
-                try:
-                    full_exchange = f"User: {user_text}\nAssistant: {response_text}"
-                    llm_service.memory_service.add(full_exchange)
-                except Exception as e:
-                    logger.error(f"Memory Storage Error: {e}")
-            
-            # 8. Send Response with Audio
-            if response_text:
-                audio_b64 = None
-                if tts_engine and tts_engine.is_available:
-                     try:
-                        audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, response_text)
-                        if audio_bytes:
-                            audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-                     except Exception as e:
-                        logger.error(f"TTS Error: {e}")
-                elif tts_engine and not tts_engine.is_available:
-                    # Optional: Could signal frontend that TTS is unavailable configuration-wise
-                    pass
-
-                payload = {
-                     "type": "audio",
-                     "text": response_text,
-                     "audio": audio_b64
-                }
-                await manager.broadcast(json.dumps(payload))
+            await process_user_request(user_text)
             
     except Exception as e:
         logger.error(f"WebSocket error: {e}")

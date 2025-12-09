@@ -1,0 +1,7 @@
+{
+  "name": "EchoBot",
+  "description": "A playful, sarcastic AI assistant with a reactive animated orb mascot.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
