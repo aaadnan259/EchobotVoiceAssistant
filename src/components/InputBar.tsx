@@ -123,7 +123,7 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
               onClick={onMicClick}
               className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 ${isMicActive
                 ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)] animate-pulse'
-                : 'bg-secondary hover:bg-secondary/80 text-muted-foreground hover:text-foreground dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70'
+                : 'bg-muted hover:bg-muted/80 text-foreground hover:text-primary dark:bg-white/5 dark:hover:bg-white/10 dark:text-white/70'
                 }`}
               aria-label="Voice input"
             >
@@ -134,10 +134,10 @@ export function InputBar({ onSendMessage, onMicClick, isMicActive, onTypingState
             <button
               type="submit"
               disabled={!input.trim()}
-              className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-indigo-500/30"
+              className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shadow-lg shadow-primary/30"
               aria-label="Send message"
             >
-              <Send className="w-5 h-5 text-white" />
+              <Send className="w-5 h-5" />
             </button>
           </div>
         </div>

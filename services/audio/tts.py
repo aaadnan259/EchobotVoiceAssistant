@@ -13,8 +13,19 @@ class TTSEngine:
 
         self.client = ElevenLabs(api_key=self.api_key)
         self.voice_name = ConfigLoader.get("voice.voice_name", "Valerie")
-        self.voice_id = self._get_voice_id(self.voice_name)
         self.model_id = ConfigLoader.get("voice.tts_model_id", "eleven_turbo_v2_5")
+        
+        # --- FIX STARTS HERE ---
+        # 1. Try to get the specific Voice ID from settings first
+        self.voice_id = ConfigLoader.get("voice.tts_voice_id")
+        
+        # 2. If no ID is configured, try to look it up by name
+        if not self.voice_id:
+            logger.info(f"No Voice ID in settings, looking up voice by name: {self.voice_name}")
+            self.voice_id = self._get_voice_id(self.voice_name)
+        else:
+            logger.info(f"Using configured Voice ID directly: {self.voice_id}")
+        # --- FIX ENDS HERE ---
 
     @property
     def is_available(self) -> bool:

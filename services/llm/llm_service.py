@@ -256,6 +256,7 @@ class LLMService:
             try:
                 # Assuming query exists
                 if hasattr(self.memory_service, 'query'):
+                    # Use only latest relevant memories to keep context clean
                     relevant_memories = self.memory_service.query(user_input)
                     if relevant_memories:
                         memory_context = f"\n\nRelevant Past Memories:\n{relevant_memories}"
@@ -263,26 +264,36 @@ class LLMService:
             except Exception as e:
                 logger.error(f"Memory Retrieval Error: {e}")
 
-        # Construct System Prompt
+        # 2. Construct System Prompt (UPGRADED: Chain of Thought)
+        system_prompt_content = (
+            f"You are EchoBot. You have access to external tools. "
+            f"Use them immediately when asked for real-time info. Do not ask for permission. "
+            f"Think step-by-step before answering complex queries."
+            f"{memory_context}"
+        )
+
         messages = [
-            {"role": "system", "content": f"You are EchoBot, a helpful and witty AI assistant.{memory_context}"}
+            {"role": "system", "content": system_prompt_content}
         ] + context + [
             {"role": "user", "content": user_input}
         ]
         
+        logger.debug(f"Sending {len(messages)} messages to LLM")
         response_message = self.get_response(messages, tools)
 
         # Handle simplified string return or object
         if isinstance(response_message, str):
              # Backward compatibility or error
              return response_message, None
-
+ 
+        # Check for tool_calls attribute (OpenAI/Mock)
         if hasattr(response_message, 'tool_calls') and response_message.tool_calls:
+            logger.info(f"LLM requested {len(response_message.tool_calls)} tool calls")
             return None, response_message.tool_calls
         
         response_text = getattr(response_message, 'content', "No response")
 
-        # 2. Store Interaction
+        # 3. Store Interaction
         if hasattr(self, 'memory_service') and self.memory_service and response_text:
             try:
                 if hasattr(self.memory_service, 'add'):

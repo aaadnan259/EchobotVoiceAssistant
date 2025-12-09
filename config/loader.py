@@ -34,6 +34,8 @@ class ConfigLoader:
             cls._settings.setdefault("ai", {})["openai_api_key"] = os.getenv("OPENAI_API_KEY")
         if os.getenv("ELEVENLABS_API_KEY"):
             cls._settings.setdefault("voice", {})["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY")
+        if os.getenv("GEMINI_MODEL"):
+            cls._settings.setdefault("ai", {})["llm_model"] = os.getenv("GEMINI_MODEL")
         if os.getenv("PORCUPINE_ACCESS_KEY"):
             cls._settings.setdefault("voice", {})["porcupine_access_key"] = os.getenv("PORCUPINE_ACCESS_KEY")
         if os.getenv("OPENWEATHER_API_KEY"):
