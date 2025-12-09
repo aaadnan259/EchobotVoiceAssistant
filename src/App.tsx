@@ -10,7 +10,7 @@ import { playSound, INITIAL_GREETING, MODEL_NAME, DEFAULT_SYSTEM_PROMPT } from '
 const App: React.FC = () => {
   // --- State ---
   const [messages, setMessages] = useState<Message[]>(() => {
-    const saved = localStorage.getItem('echoBotMessages');
+    const saved = localStorage.getItem('echoBotMessages_v2');
     return saved ? JSON.parse(saved) : [{ id: '1', role: 'model', text: INITIAL_GREETING, timestamp: Date.now() }];
   });
   const [inputValue, setInputValue] = useState('');
@@ -48,7 +48,7 @@ const App: React.FC = () => {
 
   // Persist Messages
   useEffect(() => {
-    localStorage.setItem('echoBotMessages', JSON.stringify(messages));
+    localStorage.setItem('echoBotMessages_v2', JSON.stringify(messages));
   }, [messages]);
 
   // WebSocket Connection
@@ -265,6 +265,25 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSaveChat = () => {
+    try {
+      const data = JSON.stringify(messages, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `echobot_history_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Chat saved to device');
+    } catch (e) {
+      console.error('Save failed', e);
+      toast.error('Failed to save chat');
+    }
+  };
+
   const handleClearChat = () => {
     if (window.confirm("Are you sure you want to clear the chat history?")) {
       setMessages([{ id: Date.now().toString(), role: 'model', text: INITIAL_GREETING, timestamp: Date.now() }]);
@@ -355,6 +374,16 @@ const App: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Save Chat */}
+          <button
+            onClick={handleSaveChat}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-sm font-medium transition-colors border border-white/10"
+            title="Save Chat"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+            <span>Save Chat</span>
+          </button>
+
           {/* Clear Chat */}
           <button
             onClick={handleClearChat}
