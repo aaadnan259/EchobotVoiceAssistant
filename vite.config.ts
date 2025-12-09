@@ -12,11 +12,10 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     define: {
       // Explicitly define env vars to ensure they are replaced statically at build time
-      // Priority: 1. .env file (loaded via loadEnv) 2. System Env (Render/Docker)
-      'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY),
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || process.env.GEMINI_API_KEY),
-      'process.env.VITE_GEMINI_API_KEY': JSON.stringify(env.VITE_GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY),
-      // Prevent crash if accessing other process.env props
+      // Baking the API Key directly into the code as a global constant
+      // This bypasses any process.env issues in the browser
+      '__APP_API_KEY__': JSON.stringify(process.env.GEMINI_API_KEY || process.env.API_KEY || env.GEMINI_API_KEY || env.API_KEY || ''),
+      // Keep these for backward compatibility if needed, but __APP_API_KEY__ is primary
       'process.env': {}
     },
     resolve: {

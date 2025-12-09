@@ -1,6 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import { Message } from "../types";
 
+// Global constant defined in vite.config.ts
+declare const __APP_API_KEY__: string;
+
 export const streamGeminiResponse = async (
   modelName: string,
   systemInstruction: string,
@@ -8,8 +11,13 @@ export const streamGeminiResponse = async (
   newMessage: string,
   image?: string // Base64 Data URI
 ) => {
-  const apiKey = process.env.API_KEY || process.env.GEMINI_API_KEY || (import.meta as any).env.VITE_GEMINI_API_KEY;
-  if (!apiKey) throw new Error("Missing API Key");
+  // Priority: 1. Injected Build Constant 2. Legacy Envs 3. Vite Envs
+  const apiKey = (typeof __APP_API_KEY__ !== 'undefined' ? __APP_API_KEY__ : '') ||
+    process.env.API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    (import.meta as any).env.VITE_GEMINI_API_KEY;
+
+  if (!apiKey) throw new Error("Missing API Key. Please check Render Dashboard > Environment Variables.");
   const ai = new GoogleGenAI({ apiKey });
 
   // Format history for the API
