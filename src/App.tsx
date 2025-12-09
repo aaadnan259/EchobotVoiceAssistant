@@ -3,7 +3,6 @@ import { TopBar } from './components/TopBar';
 import { BotCharacter } from './components/BotCharacter';
 import { ChatArea } from './components/ChatArea';
 import { InputBar } from './components/InputBar';
-import { SettingsModal } from './components/SettingsModal';
 import { toast, Toaster } from 'sonner';
 
 export interface Message {
@@ -32,7 +31,6 @@ export default function App() {
     return 'dark';
   });
   const [botState, setBotState] = useState<BotState>('idle');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const ws = useRef<WebSocket | null>(null);
   const hasConnected = useRef(false);
@@ -280,15 +278,13 @@ export default function App() {
   };
 
   return (
-    <div className={`relative min-h-screen overflow-hidden font-sans text-slate-200 selection:bg-cyan-400/30 ${theme === 'light'
-      ? 'bg-gradient-to-br from-gray-50 to-gray-200 text-slate-900'
-      : 'bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0B1120] to-black'
+    <div className={`relative min-h-screen overflow-hidden font-sans selection:bg-cyan-400/30 transition-colors duration-300 ${theme === 'light'
+      ? 'bg-background text-foreground'
+      : 'bg-dark-gradient text-slate-200'
       }`}>
       {/* Background Noise Texture */}
       <div className="bg-noise pointer-events-none" />
       <Toaster position="top-center" />
-
-      <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
       {/* Main Content */}
       <div className="relative z-10 flex flex-col h-screen max-w-5xl mx-auto overflow-hidden">

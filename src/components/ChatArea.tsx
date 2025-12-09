@@ -29,13 +29,13 @@ export function ChatArea({ messages }: ChatAreaProps) {
             className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[80%] p-4 rounded-2xl backdrop-blur-md shadow-lg border ${msg.sender === 'user'
+              className={`max-w-[80%] p-4 rounded-2xl backdrop-blur-md shadow-lg border transition-colors duration-300 ${msg.sender === 'user'
                 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-white/10 rounded-br-none'
-                : 'bg-gray-200 text-gray-900 dark:bg-white/5 dark:text-white rounded-bl-none'
+                : 'bg-muted text-foreground dark:bg-white/5 dark:text-white border-border rounded-bl-none'
                 }`}
             >
               <p className="leading-relaxed">{msg.text}</p>
-              <span className={`text-xs mt-2 block ${msg.sender === 'user' ? 'text-white/60' : 'text-gray-500 dark:text-white/40'
+              <span className={`text-xs mt-2 block ${msg.sender === 'user' ? 'text-white/60' : 'text-muted-foreground dark:text-white/40'
                 }`}>
                 {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
