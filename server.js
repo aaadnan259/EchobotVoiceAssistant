@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import chatRoutes from './routes/chat.js';
+import geminiRoutes from './routes/gemini.js';
 
 const app = express();
 
@@ -18,8 +19,8 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', chatRoutes);
+app.use('/api/gemini', geminiRoutes);
 
-// SPA Fallback
 // SPA Fallback
 app.get(/.*/, (req, res) => {
     res.sendFile('index.html', { root: 'build' });
@@ -44,4 +45,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`✓ Server running on port ${PORT}`);
     console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`✓ Gemini API: ${process.env.GEMINI_API_KEY ? 'Configured' : 'NOT CONFIGURED - check env vars!'}`);
 });
