@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { OrbState } from './types';
+import { OrbState, Message } from './types';
 import { playSound } from './constants';
 import {
   useMessages,
@@ -16,6 +16,13 @@ import Orb from './components/Orb';
 import MessageBubble from './components/MessageBubble';
 import SettingsModal from './components/SettingsModal';
 import { toast, Toaster } from 'sonner';
+import {
+  AppErrorBoundary,
+  ChatErrorBoundary,
+  MessageErrorBoundary,
+  SettingsErrorBoundary,
+  OrbErrorBoundary
+} from './components/ErrorBoundaries';
 
 // =============================================================================
 // Sub-Components (could be moved to separate files)
@@ -90,7 +97,7 @@ const Header: React.FC<HeaderProps> = ({
         onClick={onOpenSettings}
         className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
       </button>
     </div>
   </header>
@@ -368,16 +375,22 @@ const App: React.FC = () => {
       >
         <div className="sticky top-0 z-0 w-full flex justify-center h-0 pointer-events-none">
           <div className="absolute top-0 transform -translate-y-4">
-            <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
+            <OrbErrorBoundary>
+              <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
+            </OrbErrorBoundary>
           </div>
         </div>
 
         <div className="h-[200px] w-full shrink-0" />
 
         <div className="w-full max-w-2xl flex flex-col">
-          {messages.map(msg => (
-            <MessageBubble key={msg.id} message={msg} onSpeak={handleSpeak} />
-          ))}
+          <ChatErrorBoundary>
+            {messages.map(msg => (
+              <MessageErrorBoundary key={msg.id}>
+                <MessageBubble message={msg} onSpeak={handleSpeak} />
+              </MessageErrorBoundary>
+            ))}
+          </ChatErrorBoundary>
           <div ref={bottomRef} />
         </div>
       </main>
@@ -398,14 +411,23 @@ const App: React.FC = () => {
       />
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        settings={settings}
-        onSave={setSettings}
-      />
+      <SettingsErrorBoundary onClose={() => setIsSettingsOpen(false)}>
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          onSave={setSettings}
+        />
+      </SettingsErrorBoundary>
     </div>
   );
 };
 
-export default App;
+// Wrap the entire app with AppErrorBoundary
+const AppWithErrorBoundary: React.FC = () => (
+  <AppErrorBoundary>
+    <App />
+  </AppErrorBoundary>
+);
+
+export default AppWithErrorBoundary;
