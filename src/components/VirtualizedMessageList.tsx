@@ -1,5 +1,10 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
-import { VariableSizeList as List, ListChildComponentProps } from 'react-window';
+import * as ReactWindowModule from 'react-window';
+import { ListChildComponentProps } from 'react-window';
+
+// Fix for production build where named exports might be missing
+const List = (ReactWindowModule as any).VariableSizeList || (ReactWindowModule as any).default?.VariableSizeList || ReactWindowModule.VariableSizeList;
+
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
 
 // Fix for production build where default export might be missing
