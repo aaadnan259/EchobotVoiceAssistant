@@ -1,15 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AppSettings } from '../types';
-import { MODEL_NAME, DEFAULT_SYSTEM_PROMPT } from '../constants';
+import { STORAGE_KEYS, DEFAULT_SETTINGS } from '../constants';
 
-const STORAGE_KEY = 'echoBotSettings';
-
-const DEFAULT_SETTINGS: AppSettings = {
-    model: MODEL_NAME,
-    systemPrompt: DEFAULT_SYSTEM_PROMPT,
-    voiceURI: null,
-    theme: 'dark'
-};
+const { SETTINGS: STORAGE_KEY } = STORAGE_KEYS;
 
 export function useSettings() {
     const [settings, setSettings] = useState<AppSettings>(() => {

@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Message } from '../types';
-import { INITIAL_GREETING } from '../constants';
+import {
+    STORAGE_KEYS,
+    MESSAGE_LIMITS,
+    CHAT_MESSAGES
+} from '../constants';
 import { sanitizeMessage, sanitizeImageDataUri, sanitizeForStorage } from '../utils/sanitize';
 
-const STORAGE_KEY = 'echoBotMessages_v3';
-const MAX_MESSAGES = 500; // Prevent localStorage overflow
-const MAX_MESSAGE_LENGTH = 50000; // ~50KB per message
+const { MESSAGES: STORAGE_KEY } = STORAGE_KEYS;
+const { MAX_STORED_MESSAGES, MAX_MESSAGE_LENGTH, TRUNCATION_SUFFIX } = MESSAGE_LIMITS;
+const { INITIAL_GREETING } = CHAT_MESSAGES;
 
 const createInitialMessage = (): Message => ({
     id: '1',
@@ -22,7 +26,7 @@ function sanitizeMessageData(message: Partial<Message>): Partial<Message> {
 
     // Truncate if too long
     if (sanitized.text && sanitized.text.length > MAX_MESSAGE_LENGTH) {
-        sanitized.text = sanitized.text.slice(0, MAX_MESSAGE_LENGTH) + '... [truncated]';
+        sanitized.text = sanitized.text.slice(0, MAX_MESSAGE_LENGTH) + TRUNCATION_SUFFIX;
     }
 
     // Validate and sanitize image data
@@ -62,7 +66,7 @@ function loadMessages(): Message[] {
                 typeof msg.text === 'string' &&
                 (msg.role === 'user' || msg.role === 'model')
             )
-            .slice(-MAX_MESSAGES);
+            .slice(-MAX_STORED_MESSAGES);
 
         return validMessages.length > 0 ? validMessages : [createInitialMessage()];
     } catch (e) {
@@ -76,7 +80,7 @@ function loadMessages(): Message[] {
  */
 function saveMessages(messages: Message[]): boolean {
     try {
-        const trimmedMessages = messages.slice(-MAX_MESSAGES);
+        const trimmedMessages = messages.slice(-MAX_STORED_MESSAGES);
         const sanitized = sanitizeForStorage(trimmedMessages);
 
         if (!sanitized) {
@@ -123,7 +127,7 @@ export function useMessages() {
             text: message.text
         } as Message;
 
-        setMessages(prev => [...prev, newMessage].slice(-MAX_MESSAGES));
+        setMessages(prev => [...prev, newMessage].slice(-MAX_STORED_MESSAGES));
         return newMessage.id;
     }, []);
 
@@ -155,7 +159,7 @@ export function useMessages() {
 
             const newText = msg.text + text;
             const truncatedText = newText.length > MAX_MESSAGE_LENGTH
-                ? newText.slice(0, MAX_MESSAGE_LENGTH) + '... [truncated]'
+                ? newText.slice(0, MAX_MESSAGE_LENGTH) + TRUNCATION_SUFFIX
                 : newText;
 
             return {

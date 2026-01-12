@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { OrbState, Message } from './types';
-import { playSound } from './constants';
+import { playSound, CHAT_MESSAGES } from './constants';
 import {
   useMessages,
   useSettings,
@@ -23,6 +23,8 @@ import {
   SettingsErrorBoundary,
   OrbErrorBoundary
 } from './components/ErrorBoundaries';
+
+const { SUCCESS, ERRORS, CONFIRMATIONS } = CHAT_MESSAGES;
 
 // =============================================================================
 // Sub-Components (could be moved to separate files)
@@ -263,7 +265,7 @@ const App: React.FC = () => {
 
   // --- WebSocket ---
   useWebSocket({
-    onConnect: () => toast.success('Connected to EchoBot Brain'),
+    onConnect: () => toast.success(SUCCESS.CONNECTED),
     onMessage: (data) => {
       if (data.type === 'error') {
         toast.error(data.text || 'WebSocket error');
@@ -311,7 +313,7 @@ const App: React.FC = () => {
 
   const handleMicClick = useCallback(() => {
     if (!isSpeechSupported) {
-      alert('Voice input is not supported in this browser.');
+      alert(ERRORS.VOICE_NOT_SUPPORTED);
       return;
     }
     toggleListening();
@@ -332,7 +334,7 @@ const App: React.FC = () => {
   }, []);
 
   const handleClearChat = useCallback(() => {
-    if (window.confirm('Are you sure you want to clear the chat history?')) {
+    if (window.confirm(CONFIRMATIONS.CLEAR_CHAT)) {
       clearMessages();
       setOrbState(OrbState.IDLE);
     }
@@ -340,7 +342,7 @@ const App: React.FC = () => {
 
   const handleSaveChat = useCallback(() => {
     if (exportMessages()) {
-      toast.success('Chat saved to device');
+      toast.success(SUCCESS.CHAT_SAVED);
     } else {
       toast.error('Failed to save chat');
     }

@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { UI_CONFIG } from '../constants';
+
+const { ORB_SCROLL_DISTANCE } = UI_CONFIG;
 
 interface UseScrollBehaviorOptions {
     /** Dependencies that trigger auto-scroll when changed */
@@ -8,7 +11,7 @@ interface UseScrollBehaviorOptions {
 }
 
 export function useScrollBehavior(options: UseScrollBehaviorOptions = {}) {
-    const { scrollTriggers = [], maxScrollForProgress = 200 } = options;
+    const { scrollTriggers = [], maxScrollForProgress = ORB_SCROLL_DISTANCE } = options;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);

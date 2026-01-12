@@ -1,7 +1,10 @@
 import { useState, useRef, useCallback } from 'react';
 import { Message, OrbState, AppSettings } from '../types';
-import { playSound } from '../constants';
+import { playSound, CHAT_MESSAGES, UI_CONFIG } from '../constants';
 import { streamGeminiResponse } from '../services/geminiService';
+
+const { ERRORS } = CHAT_MESSAGES;
+const { ERROR_DISPLAY_DURATION } = UI_CONFIG;
 
 interface UseChatOptions {
     messages: Message[];
@@ -71,17 +74,13 @@ export function useChat({
             for await (const chunk of stream) {
                 if (stopGenerationRef.current) break;
 
-                const chunkText = chunk.text || ''; // Ensure it's handled even if undefined/object (though it should be string now)
-                fullText += (typeof chunk === 'string' ? chunk : chunkText);
+                const chunkText = chunk.text || '';
+                fullText += chunkText;
 
-                // Extract grounding metadata if present (handling legacy object structure if needed)
-                // In the new stream string implementation, we don't get metadata in the main stream,
-                // but keeping this logic safe.
-                /* 
-               if (chunk.candidates?.[0]?.groundingMetadata) {
-                 groundingMetadata = chunk.candidates[0].groundingMetadata;
-               }
-               */
+                // Extract grounding metadata if present
+                if (chunk.candidates?.[0]?.groundingMetadata) {
+                    groundingMetadata = chunk.candidates[0].groundingMetadata;
+                }
 
                 updateMessage(botMsgId, {
                     text: fullText,
@@ -100,11 +99,11 @@ export function useChat({
 
                 const errorMessage = error.message
                     ? `Error: ${error.message}`
-                    : "My neural pathways are a bit jammed right now. Can you try that again?";
+                    : ERRORS.GENERIC;
 
                 updateMessage(botMsgId, { text: errorMessage });
 
-                setTimeout(() => updateOrbState(OrbState.IDLE), 3000);
+                setTimeout(() => updateOrbState(OrbState.IDLE), ERROR_DISPLAY_DURATION);
             } else {
                 updateOrbState(OrbState.IDLE);
             }

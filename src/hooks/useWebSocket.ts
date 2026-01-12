@@ -1,4 +1,13 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { WEBSOCKET_CONFIG } from '../constants';
+
+const {
+    RECONNECT_INTERVAL,
+    MAX_RECONNECT_DELAY,
+    MAX_RECONNECT_ATTEMPTS: DEFAULT_MAX_ATTEMPTS,
+    WS_PATH,
+    DEV_WS_PORT
+} = WEBSOCKET_CONFIG;
 
 interface WebSocketMessage {
     type?: string;
@@ -23,19 +32,12 @@ function getWebSocketUrl(): string {
     const port = window.location.port ? `:${window.location.port}` : '';
 
     // In development, backend might be on a different port
-    // Note: relying on side-effects of import.meta from usage context can be tricky,
-    // but we can try to check it or fallback.
-    // Accessing import.meta directly here might require 'esnext' or similar TS settings.
-    // We'll use a pragmatic approach checking if port is 5173 or 3000 -> then use 8000/3001?
-
-    // The user provided implementation:
     const isDev = (import.meta as any).env?.DEV;
     if (isDev) {
-        // Assuming python backend is 8000 as per original App.tsx logic
-        return `ws://${window.location.hostname}:8000/ws`;
+        return `ws://${window.location.hostname}:${DEV_WS_PORT}${WS_PATH}`;
     }
 
-    return `${protocol}//${host}${port}/ws`;
+    return `${protocol}//${host}${port}${WS_PATH}`;
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
@@ -44,8 +46,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         onConnect,
         onDisconnect,
         onError,
-        reconnectInterval = 5000,
-        maxReconnectAttempts = Infinity
+        reconnectInterval = RECONNECT_INTERVAL,
+        maxReconnectAttempts = DEFAULT_MAX_ATTEMPTS
     } = options;
 
     const wsRef = useRef<WebSocket | null>(null);
@@ -102,7 +104,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
                 if (reconnectAttempts.current < maxReconnectAttempts) {
                     const delay = Math.min(
                         reconnectInterval * Math.pow(2, reconnectAttempts.current),
-                        30000 // Max 30 seconds
+                        MAX_RECONNECT_DELAY
                     );
 
                     reconnectTimeoutRef.current = setTimeout(() => {

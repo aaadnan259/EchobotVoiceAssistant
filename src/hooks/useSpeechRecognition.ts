@@ -1,4 +1,11 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { SPEECH_CONFIG } from '../constants';
+
+const {
+    RECOGNITION_LANG,
+    CONTINUOUS_RECOGNITION,
+    INTERIM_RESULTS
+} = SPEECH_CONFIG;
 
 interface UseSpeechRecognitionOptions {
     onResult?: (transcript: string) => void;
@@ -16,9 +23,9 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
         onStart,
         onEnd,
         onError,
-        continuous = false,
-        interimResults = true,
-        lang = 'en-US'
+        continuous = CONTINUOUS_RECOGNITION,
+        interimResults = INTERIM_RESULTS,
+        lang = RECOGNITION_LANG
     } = options;
 
     const recognitionRef = useRef<any>(null);
