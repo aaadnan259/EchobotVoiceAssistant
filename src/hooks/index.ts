@@ -6,3 +6,5 @@ export { useWebSocket } from './useWebSocket';
 export { useChat } from './useChat';
 export { useScrollBehavior } from './useScrollBehavior';
 export { useAudioAnalyzer } from './useAudioAnalyzer';
+export { useReducedMotion } from './useReducedMotion';
+export { useFocusTrap } from './useFocusTrap';
