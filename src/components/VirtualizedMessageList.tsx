@@ -1,6 +1,10 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
 import { VariableSizeList as List, ListChildComponentProps } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
+import * as AutoSizerModule from 'react-virtualized-auto-sizer';
+
+// Fix for production build where default export might be missing
+const AutoSizer = (AutoSizerModule as any).default || AutoSizerModule;
+
 import { Message } from '../types';
 import MessageBubble from './MessageBubble';
 import { MessageErrorBoundary } from './ErrorBoundaries';
