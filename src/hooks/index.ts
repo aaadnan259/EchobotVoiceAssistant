@@ -3,6 +3,7 @@ export { useSettings } from './useSettings';
 export { useSpeechRecognition } from './useSpeechRecognition';
 export { useSpeechSynthesis } from './useSpeechSynthesis';
 export { useWebSocket } from './useWebSocket';
+export { useSecureWebSocket } from './useSecureWebSocket';
 export { useChat } from './useChat';
 export { useScrollBehavior } from './useScrollBehavior';
 export { useAudioAnalyzer } from './useAudioAnalyzer';
