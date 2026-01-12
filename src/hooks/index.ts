@@ -8,3 +8,4 @@ export { useScrollBehavior } from './useScrollBehavior';
 export { useAudioAnalyzer } from './useAudioAnalyzer';
 export { useReducedMotion } from './useReducedMotion';
 export { useFocusTrap } from './useFocusTrap';
+export { useVirtualization } from './useVirtualization';

@@ -16,18 +16,20 @@ import { announce, ARIA_LABELS, getOrbStatusDescription } from './utils/accessib
 import { logger } from './utils/logger';
 
 import Orb from './components/Orb';
-import MessageBubble from './components/MessageBubble';
 import SettingsModal from './components/SettingsModal';
+import { SmartMessageList } from './components/VirtualizedMessageList';
 import { toast, Toaster } from 'sonner';
 import {
   AppErrorBoundary,
   ChatErrorBoundary,
-  MessageErrorBoundary,
   SettingsErrorBoundary,
   OrbErrorBoundary
 } from './components/ErrorBoundaries';
 
 const { SUCCESS, ERRORS, CONFIRMATIONS } = CHAT_MESSAGES;
+
+/** Threshold for switching to virtualized rendering */
+const VIRTUALIZATION_THRESHOLD = 50;
 
 // =============================================================================
 // Sub-Components (could be moved to separate files)
@@ -467,22 +469,20 @@ const App: React.FC = () => {
 
         <div
           id="chat-messages"
-          className="w-full max-w-2xl flex flex-col"
+          className={`w-full max-w-2xl flex flex-col ${messages.length >= VIRTUALIZATION_THRESHOLD ? 'h-[calc(100vh-400px)]' : ''}`}
           role="log"
           aria-label="Chat messages"
           aria-live="polite"
         >
           <ChatErrorBoundary>
-            {messages.map((msg, index) => (
-              <MessageErrorBoundary key={msg.id}>
-                <MessageBubble
-                  message={msg}
-                  onSpeak={handleSpeak}
-                />
-              </MessageErrorBoundary>
-            ))}
+            <SmartMessageList
+              messages={messages}
+              onSpeak={handleSpeak}
+              virtualizationThreshold={VIRTUALIZATION_THRESHOLD}
+              autoScrollToBottom={true}
+            />
           </ChatErrorBoundary>
-          <div ref={bottomRef} />
+          {messages.length < VIRTUALIZATION_THRESHOLD && <div ref={bottomRef} />}
         </div>
       </main>
 
