@@ -1,5 +1,7 @@
 import React, { ReactNode } from 'react';
 import ErrorBoundary from './ErrorBoundary';
+import { logger } from '../utils/logger';
+import { STORAGE_KEYS } from '../constants';
 
 /**
  * Error boundary for the entire app.
@@ -45,7 +47,7 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }
 
                 <button
                     onClick={() => {
-                        localStorage.removeItem('echoBotMessages_v3');
+                        localStorage.removeItem(STORAGE_KEYS.MESSAGES);
                         handleReload();
                     }}
                     className="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-full font-medium transition-colors"
@@ -60,9 +62,9 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }
         <ErrorBoundary
             fallback={fallback}
             onError={(error, errorInfo) => {
-                // Log to console in all environments
-                console.error('App Error:', error);
-                console.error('Stack:', errorInfo.componentStack);
+                // Log errors (logger handles environment-appropriate output)
+                logger.error('App Error:', error);
+                logger.error('Stack:', errorInfo.componentStack);
 
                 // Here you could send to an error tracking service
                 // if (typeof window !== 'undefined' && window.Sentry) {

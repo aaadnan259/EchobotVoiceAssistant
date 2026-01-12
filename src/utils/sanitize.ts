@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import { logger } from './logger';
 
 /**
  * Sanitization configuration for different contexts
@@ -17,9 +18,9 @@ const SANITIZE_CONFIG = {
             'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
             'ul', 'ol', 'li',
             'blockquote', 'pre', 'code',
-            'a', 'span', 'div', 'img'
+            'a', 'span', 'div'
         ],
-        ALLOWED_ATTR: ['href', 'target', 'rel', 'class', 'src', 'alt', 'title'],
+        ALLOWED_ATTR: ['href', 'target', 'rel', 'class'],
         ALLOW_DATA_ATTR: false,
         ADD_ATTR: ['target'], // Allow target for links
         FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input', 'object', 'embed'],
@@ -38,7 +39,7 @@ const SANITIZE_CONFIG = {
  */
 export function sanitizeText(input: string): string {
     if (!input || typeof input !== 'string') return '';
-    return DOMPurify.sanitize(input, SANITIZE_CONFIG.text as any);
+    return DOMPurify.sanitize(input, SANITIZE_CONFIG.text);
 }
 
 /**
@@ -55,7 +56,7 @@ export function sanitizeRichText(input: string): string {
         }
     });
 
-    const clean = DOMPurify.sanitize(input, SANITIZE_CONFIG.richText as any);
+    const clean = DOMPurify.sanitize(input, SANITIZE_CONFIG.richText);
 
     // Remove the hook to avoid memory leaks
     DOMPurify.removeHook('afterSanitizeAttributes');
@@ -68,7 +69,7 @@ export function sanitizeRichText(input: string): string {
  */
 export function sanitizeCode(input: string): string {
     if (!input || typeof input !== 'string') return '';
-    return DOMPurify.sanitize(input, SANITIZE_CONFIG.code as any);
+    return DOMPurify.sanitize(input, SANITIZE_CONFIG.code);
 }
 
 /**
@@ -103,8 +104,6 @@ export function sanitizeUrl(url: string): string {
     // Block dangerous protocols
     const dangerousProtocols = ['javascript:', 'data:', 'vbscript:', 'file:'];
     if (dangerousProtocols.some(protocol => trimmed.startsWith(protocol))) {
-        // Exception for image data URIs which are handled separately/safely usually,
-        // but here we block generic data: to be safe. SafeImage handles valid image data URIs.
         return '';
     }
 
@@ -136,14 +135,14 @@ export function sanitizeForStorage<T>(data: T, maxSize: number = 5 * 1024 * 1024
 
         // Check size limit (default 5MB)
         if (serialized.length > maxSize) {
-            console.warn('Data exceeds storage size limit');
+            logger.warn('Data exceeds storage size limit');
             return null;
         }
 
         // Parse and return to ensure valid JSON
         return JSON.parse(serialized);
     } catch (e) {
-        console.error('Failed to sanitize data for storage:', e);
+        logger.error('Failed to sanitize data for storage:', e);
         return null;
     }
 }
@@ -173,7 +172,7 @@ export function sanitizeImageDataUri(dataUri: string): string | null {
     if (!dataUriRegex.test(dataUri)) {
         // Try a more lenient check for valid base64 image
         if (!dataUri.startsWith('data:image/')) {
-            console.warn('Invalid image data URI');
+            logger.warn('Invalid image data URI');
             return null;
         }
     }
@@ -181,7 +180,7 @@ export function sanitizeImageDataUri(dataUri: string): string | null {
     // Additional size check (e.g., max 10MB)
     const maxSize = 10 * 1024 * 1024;
     if (dataUri.length > maxSize) {
-        console.warn('Image data URI exceeds size limit');
+        logger.warn('Image data URI exceeds size limit');
         return null;
     }
 

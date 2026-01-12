@@ -1,4 +1,5 @@
 import { Message } from "../types";
+import { logger } from "../utils/logger";
 
 /**
  * Streams a response from Gemini via the backend proxy.
@@ -79,7 +80,7 @@ export async function* streamGeminiResponse(
             }
           } catch (parseError) {
             // Skip invalid JSON lines
-            console.warn('Failed to parse SSE data:', line);
+            logger.warn('Failed to parse SSE data:', line);
           }
         }
       }

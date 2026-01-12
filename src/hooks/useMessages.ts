@@ -6,6 +6,7 @@ import {
     CHAT_MESSAGES
 } from '../constants';
 import { sanitizeMessage, sanitizeImageDataUri, sanitizeForStorage } from '../utils/sanitize';
+import { logger } from '../utils/logger';
 
 const { MESSAGES: STORAGE_KEY } = STORAGE_KEYS;
 const { MAX_STORED_MESSAGES, MAX_MESSAGE_LENGTH, TRUNCATION_SUFFIX } = MESSAGE_LIMITS;
@@ -54,7 +55,7 @@ function loadMessages(): Message[] {
 
         // Validate it's an array
         if (!Array.isArray(parsed)) {
-            console.warn('Invalid messages format in localStorage');
+            logger.warn('Invalid messages format in localStorage');
             return [createInitialMessage()];
         }
 
@@ -70,7 +71,7 @@ function loadMessages(): Message[] {
 
         return validMessages.length > 0 ? validMessages : [createInitialMessage()];
     } catch (e) {
-        console.error('Failed to load messages:', e);
+        logger.error('Failed to load messages:', e);
         return [createInitialMessage()];
     }
 }
@@ -93,7 +94,7 @@ function saveMessages(messages: Message[]): boolean {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
         return true;
     } catch (e) {
-        console.error('Failed to save messages:', e);
+        logger.error('Failed to save messages:', e);
 
         if (e instanceof DOMException && e.name === 'QuotaExceededError') {
             const reduced = messages.slice(-Math.floor(messages.length / 2));
@@ -195,7 +196,7 @@ export function useMessages() {
             URL.revokeObjectURL(url);
             return true;
         } catch (e) {
-            console.error('Export failed:', e);
+            logger.error('Export failed:', e);
             return false;
         }
     }, [messages]);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { SPEECH_CONFIG } from '../constants';
+import { logger } from '../utils/logger';
 
 const {
     RECOGNITION_LANG,
@@ -60,7 +61,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
         };
 
         recognition.onerror = (event: any) => {
-            console.error('Speech recognition error:', event.error);
+            logger.error('Speech recognition error:', event.error);
             setIsListening(false);
             onError?.(event.error);
         };
@@ -79,7 +80,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
 
     const startListening = useCallback(() => {
         if (!recognitionRef.current) {
-            console.warn('Speech recognition not supported');
+            logger.warn('Speech recognition not supported');
             return false;
         }
 
@@ -87,7 +88,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
             recognitionRef.current.start();
             return true;
         } catch (e) {
-            console.error('Failed to start speech recognition:', e);
+            logger.error('Failed to start speech recognition:', e);
             return false;
         }
     }, []);

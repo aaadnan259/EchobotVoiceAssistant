@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { WEBSOCKET_CONFIG } from '../constants';
+import { logger } from '../utils/logger';
 
 const {
     RECONNECT_INTERVAL,
@@ -86,12 +87,12 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
                     const data = JSON.parse(event.data);
                     onMessage?.(data);
                 } catch (e) {
-                    console.error('Failed to parse WebSocket message:', e);
+                    logger.error('Failed to parse WebSocket message:', e);
                 }
             };
 
             socket.onerror = (error) => {
-                console.error('WebSocket error:', error);
+                logger.error('WebSocket error:', error);
                 onError?.(error);
             };
 
@@ -116,7 +117,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
             wsRef.current = socket;
         } catch (e) {
-            console.error('Failed to create WebSocket:', e);
+            logger.error('Failed to create WebSocket:', e);
             setConnectionStatus('disconnected');
         }
     }, [onMessage, onConnect, onDisconnect, onError, reconnectInterval, maxReconnectAttempts]);
@@ -134,7 +135,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
             wsRef.current.send(typeof data === 'string' ? data : JSON.stringify(data));
             return true;
         }
-        console.warn('WebSocket not connected, cannot send message');
+        logger.warn('WebSocket not connected, cannot send message');
         return false;
     }, []);
 

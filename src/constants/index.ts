@@ -211,9 +211,8 @@ export function playSound(sound: keyof typeof SOUNDS): void {
 
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.1);
-    } catch (e) {
-        // Silently fail if audio isn't available
-        console.debug('Sound playback not available:', e);
+    } catch {
+        // Silently fail if audio isn't available (not worth logging)
     }
 }
 

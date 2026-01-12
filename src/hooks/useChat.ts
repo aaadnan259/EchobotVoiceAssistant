@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Message, OrbState, AppSettings } from '../types';
 import { playSound, CHAT_MESSAGES, UI_CONFIG } from '../constants';
 import { streamGeminiResponse } from '../services/geminiService';
+import { logger } from '../utils/logger';
 
 const { ERRORS } = CHAT_MESSAGES;
 const { ERROR_DISPLAY_DURATION } = UI_CONFIG;
@@ -91,7 +92,7 @@ export function useChat({
             updateOrbState(OrbState.IDLE);
 
         } catch (error: any) {
-            console.error('Chat error:', error);
+            logger.error('Chat error:', error);
 
             if (!stopGenerationRef.current) {
                 updateOrbState(OrbState.ERROR);
