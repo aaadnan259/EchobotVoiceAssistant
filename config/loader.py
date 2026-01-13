@@ -27,9 +27,21 @@ class ConfigLoader:
     @classmethod
     def _inject_env_vars(cls):
         """Inject sensitive keys from .env into the settings dict."""
-        # API Keys
-        if os.getenv("GOOGLE_API_KEY"):
-            cls._settings.setdefault("ai", {})["google_api_key"] = os.getenv("GOOGLE_API_KEY")
+        print("=== CONFIG LOADING ===")
+        
+        # API Keys - Check both GEMINI and GOOGLE
+        gemini_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        
+        print(f"GEMINI_API_KEY env var exists: {bool(os.getenv('GEMINI_API_KEY'))}")
+        print(f"GOOGLE_API_KEY env var exists: {bool(os.getenv('GOOGLE_API_KEY'))}")
+        print(f"Final API key loaded: {bool(gemini_key)}")
+        
+        if gemini_key:
+            cls._settings.setdefault("ai", {})["google_api_key"] = gemini_key
+            print(f"API key length: {len(gemini_key)}")
+        else:
+            print("ERROR: No Gemini API key found!")
+
         if os.getenv("OPENAI_API_KEY"):
             cls._settings.setdefault("ai", {})["openai_api_key"] = os.getenv("OPENAI_API_KEY")
         if os.getenv("ELEVENLABS_API_KEY"):

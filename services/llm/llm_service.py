@@ -56,6 +56,9 @@ class LLMService:
 
     def _get_google_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
         try:
+            print(f"=== LLM SERVICE: _get_google_response ===")
+            print(f"Model: {self.model_name}")
+            
             # 1. Convert OpenAI messages to Gemini Contents
             gemini_contents = []
             system_instruction = None
@@ -65,7 +68,6 @@ class LLMService:
                 content = msg.get("content", "")
                 
                 if role == "system":
-                    # Concatenate multiple system messages if present
                     if system_instruction:
                         system_instruction += "\n" + content
                     else:
@@ -76,17 +78,10 @@ class LLMService:
                 
                 elif role == "assistant":
                     if msg.get("tool_calls"):
-                        # Reconstruct the assistant's tool use (FunctionCall)
-                        # Structure: role: model, parts: [FunctionCall(...)]
                         parts = []
                         for tc in msg.get("tool_calls"):
                              from google.ai.generativelanguage import FunctionCall
                              import json
-                             # tc is an object or dict? 'msg' is raw from OpenAI/app, so tool_calls is list of objects usually in app.py logic
-                             # BUT app.py converts it to dict when storing?
-                             # In app.py: messages.append(response_message) where response_message is MockMessage (obj)
-                             # Then later passed back to get_response.
-                             # We need to handle both dict and object.
                              
                              fn_name = ""
                              fn_args = {}
@@ -107,18 +102,12 @@ class LLMService:
                         
                         gemini_contents.append({"role": "model", "parts": parts})
                     else:
-                        # Standard text response
                         gemini_contents.append({"role": "model", "parts": [content]})
                 
                 elif role == "tool":
-                    # Handle tool output (FunctionResponse)
-                    # output structure: {'function_response': {'name': 'fn_name', 'response': {'result': '...'}}}
                     function_name = msg.get("name")
-                    # OpenAI passes string content (json usually)
                     try:
                         import json
-                        # Try to parse content as JSON so Gemini receives structured data (better)
-                        # Or just pass as string wrapped in dict
                         result_content = json.loads(content)
                     except:
                         result_content = content
@@ -136,21 +125,30 @@ class LLMService:
             if tools:
                 gemini_tools = self._convert_tools_to_gemini(tools)
 
-            # 3. Create Model with System Instruction
-            # We instantiate per-request to bind the system prompt correctly
+            # 3. Create Model
+            # Ensure model name is correct (already fixed in init/settings)
+            
+            print(f"Instantiating GenerativeModel: {self.model_name}")
             model = genai.GenerativeModel(self.model_name, system_instruction=system_instruction)
             
             # 4. Generate Content
-            # Pass full history as contents
+            print(f"Sending content to Gemini... ({len(gemini_contents)} parts)")
             response = model.generate_content(gemini_contents, tools=gemini_tools)
             
+            print(f"Gemini response received. Parts: {len(response.parts) if response.parts else 0}")
+            if response.text:
+                 print(f"Response text start: {response.text[:50]}...")
+            else:
+                 print("Response text was empty/None")
+
             # 5. Parse Response
             return self._parse_gemini_response(response)
 
         except Exception as e:
             import sys
-            sys.stderr.write(f"DEBUG EXCEPTION: {e}\n")
-            sys.stderr.flush()
+            import traceback
+            print(f"ERROR in Gemini API call: {e}")
+            traceback.print_exc()
             logger.error(f"Google Gemini Error: {e}", exc_info=True)
             return MockMessage("I'm having trouble thinking with Gemini right now.")
 
