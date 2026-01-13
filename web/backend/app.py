@@ -1,14 +1,17 @@
-from fastapi import FastAPI, WebSocket, Request
+from fastapi import FastAPI, WebSocket, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import uvicorn
 import json
 import asyncio
 import threading
-from typing import List
+from typing import List, Optional, Dict, Any
 import os
 import base64
+from pydantic import BaseModel
+import google.generativeai as genai
 
 from config.loader import ConfigLoader
 from services.plugin_manager import PluginManager
@@ -18,6 +21,111 @@ from utils.logger import logger
 from services.llm.llm_service import LLMService
 
 app = FastAPI(title="EchoBot Web UI")
+
+class ChatRequest(BaseModel):
+    modelName: str = "gemini-2.0-flash-exp"
+    systemInstruction: str
+    history: List[Dict[str, Any]]
+    newMessage: str
+    images: Optional[List[str]] = None
+
+def decode_image(base64_string: str):
+    """Convert base64 string to dict for Gemini."""
+    if not base64_string:
+        return None
+    
+    # Remove header if present (data:image/png;base64,...)
+    if "base64," in base64_string:
+        base64_string = base64_string.split("base64,")[1]
+    
+    # Simple mime type assumption (can be improved)
+    return {
+        "mime_type": "image/jpeg", 
+        "data": base64_string
+    }
+
+@app.post("/api/gemini/chat")
+async def gemini_chat(request: ChatRequest):
+    api_key = ConfigLoader.get("ai.google_api_key")
+    if not api_key:
+         raise HTTPException(status_code=500, detail="Google API Key not configured on server")
+    
+    genai.configure(api_key=api_key)
+    
+    # Prepare history
+    gemini_history = []
+    
+    # Filter and format history
+    # System instruction is handled by model param, but we might want to manually prepend if needed
+    # Gemini API supports system_instruction in GenerativeModel constructor
+    
+    # Transform history
+    for msg in request.history:
+        role = "user" if msg.get("role") == "user" else "model"
+        parts = [msg.get("text", "")]
+        
+        # Handle images in history if they exist (Gemini supports mixed content)
+        # Note: Sending previous images might be heavy. 
+        # For this implementation, we might skip historical images to save bandwidth/tokens
+        # unless strictly required. User only sends text/role in typical history.
+        # But 'msg.images' might exist.
+        
+        gemini_history.append({"role": role, "parts": parts})
+    
+    # Current Message
+    current_parts = [request.newMessage]
+    if request.images:
+        for img_str in request.images:
+            img_data = decode_image(img_str)
+            if img_data:
+                current_parts.append(img_data)
+                
+    model = genai.GenerativeModel(
+        model_name=request.modelName,
+        system_instruction=request.systemInstruction
+    )
+    
+    chat = model.start_chat(history=gemini_history)
+    
+    async def event_generator():
+        try:
+            # We use send_message_async with stream=True
+            response = await chat.send_message_async(current_parts, stream=True)
+            
+            async for chunk in response:
+                if chunk.text:
+                    # SSE format: data: {...} \n\n
+                    payload = json.dumps({"text": chunk.text})
+                    yield f"data: {payload}\n\n"
+                    
+            yield f"data: {json.dumps({'done': True})}\n\n"
+            
+        except Exception as e:
+            logger.error(f"Gemini Streaming Error: {e}")
+            error_payload = json.dumps({"error": str(e)})
+            yield f"data: {error_payload}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+@app.post("/api/gemini/chat-simple")
+async def gemini_chat_simple(request: ChatRequest):
+    """Non-streaming fallback"""
+    api_key = ConfigLoader.get("ai.google_api_key")
+    if not api_key:
+         raise HTTPException(status_code=500, detail="Google API Key not configured")
+         
+    genai.configure(api_key=api_key)
+    
+    model = genai.GenerativeModel(
+        model_name=request.modelName,
+        system_instruction=request.systemInstruction
+    )
+    
+    # Simplify for one-shot (ignoring history for brevity in simple mode or constructing it same as above)
+    # Ideally should share logic.
+    response = model.generate_content([request.newMessage])
+    return {"text": response.text}
+
 
 # CORS
 app.add_middleware(
