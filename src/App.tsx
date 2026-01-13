@@ -232,7 +232,7 @@ const App: React.FC = () => {
     clearMessages();
     setOrbState(OrbState.IDLE);
     setInputValue('');
-    setSelectedImage(null);
+    clearImages();
     clearSearch();
     toast.success(SUCCESS.CHAT_RESET);
   }, [clearMessages, setOrbState, clearSearch]);
