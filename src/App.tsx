@@ -37,7 +37,8 @@ import {
   ExportModal,
   ImportModal,
   ShortcutsModal,
-  ImageDropZone // New component
+  ImageDropZone,
+  SummaryPanel
 } from './components';
 import {
   AppErrorBoundary,
@@ -105,6 +106,7 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null!);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -345,6 +347,7 @@ const App: React.FC = () => {
         onExportClick={() => setIsExportOpen(true)}
         onImportClick={() => setIsImportOpen(true)}
         onShortcutsClick={() => setIsShortcutsOpen(true)}
+        onSummarizeClick={() => setIsSummaryOpen(true)}
       />
 
       {!isOnline && (
@@ -474,6 +477,13 @@ const App: React.FC = () => {
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      <SummaryPanel
+        isOpen={isSummaryOpen}
+        onClose={() => setIsSummaryOpen(false)}
+        messages={messages}
+        settings={settings}
       />
 
     </div>

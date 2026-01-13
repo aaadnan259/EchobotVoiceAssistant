@@ -11,6 +11,7 @@ interface TopBarProps {
   onExportClick: () => void;
   onImportClick: () => void;
   onShortcutsClick: () => void;
+  onSummarizeClick: () => void;
 }
 
 export function TopBar({
@@ -22,7 +23,8 @@ export function TopBar({
   onVoiceToggle,
   onExportClick,
   onImportClick,
-  onShortcutsClick
+  onShortcutsClick,
+  onSummarizeClick
 }: TopBarProps) {
   const handleLogoClick = () => {
     window.location.reload();

@@ -33,3 +33,4 @@ export { ShortcutsModal } from './ShortcutsModal';
 export { ThemePicker } from './ThemePicker';
 export { VoiceSettings } from './VoiceSettings';
 export { ImageDropZone } from './ImageDropZone';
+export { default as SummaryPanel } from './SummaryPanel';
