@@ -17,7 +17,7 @@ export async function* streamGeminiResponse(
   systemInstruction: string,
   history: Message[],
   newMessage: string,
-  image?: string
+  images?: string[] // Changed from single image
 ): AsyncGenerator<string, void, unknown> {
   const response = await fetch('/api/gemini/chat', {
     method: 'POST',
@@ -30,10 +30,11 @@ export async function* streamGeminiResponse(
       history: history.map(msg => ({
         role: msg.role,
         text: msg.text,
-        image: msg.image
+        images: msg.images, // Pass array
+        image: msg.image    // Pass legacy too just in case
       })),
       newMessage,
-      image
+      images
     }),
   });
 

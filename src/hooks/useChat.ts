@@ -35,9 +35,9 @@ export function useChat({
 
     const sendMessage = useCallback(async (
         text: string,
-        image?: string
+        images?: string[]
     ) => {
-        if (!text.trim() && !image) return;
+        if (!text.trim() && (!images || images.length === 0)) return;
 
         const userText = text.trim();
 
@@ -45,7 +45,8 @@ export function useChat({
         addMessage({
             role: 'user',
             text: userText,
-            image
+            images,
+            image: images?.[0] // Backward compat
         });
         playSound('send');
 
@@ -63,7 +64,7 @@ export function useChat({
                 settings.systemPrompt,
                 messages,
                 userText,
-                image
+                images
             );
 
             updateOrbState(OrbState.RESPONDING);

@@ -51,6 +51,12 @@ function sanitizeMessageData(message: Partial<Message>): Partial<Message> {
         if (!sanitizedImage) delete sanitized.image;
         else sanitized.image = sanitizedImage;
     }
+    if (sanitized.images && Array.isArray(sanitized.images)) {
+        sanitized.images = sanitized.images
+            .map(img => sanitizeImageDataUri(img))
+            .filter((img): img is string => !!img);
+        if (sanitized.images.length === 0) delete sanitized.images;
+    }
     return sanitized;
 }
 

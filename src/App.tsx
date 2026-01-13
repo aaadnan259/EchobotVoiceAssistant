@@ -14,7 +14,8 @@ import {
   useReducedMotion,
   useOnlineStatus,
   useMessageSearch,
-  useKeyboardShortcuts
+  useKeyboardShortcuts,
+  useImageInput // New hook
 } from './hooks';
 import { announce, ARIA_LABELS, getOrbStatusDescription } from './utils/accessibility';
 import { logger } from './utils/logger';
@@ -29,14 +30,14 @@ import {
   OrbCanvas,
   ErrorBoundary,
   KeyboardShortcuts,
-  Search, // Assuming Search icon was used? No, SearchBar component.
   SearchBar,
   SearchResults,
   Orb,
   SettingsModal,
   ExportModal,
   ImportModal,
-  ShortcutsModal
+  ShortcutsModal,
+  ImageDropZone // New component
 } from './components';
 import {
   AppErrorBoundary,
@@ -90,7 +91,17 @@ const App: React.FC = () => {
 
   // --- Local State ---
   const [inputValue, setInputValue] = useState('');
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  // const [selectedImage, setSelectedImage] = useState<string | null>(null); // Replaced
+  const {
+    images,
+    handleFileSelect,
+    handleDrop,
+    handlePaste,
+    removeImage,
+    clearImages
+  } = useImageInput();
+  const [isDragging, setIsDragging] = useState(false);
+
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -172,11 +183,11 @@ const App: React.FC = () => {
 
   // --- Handlers ---
   const handleSend = useCallback(() => {
-    sendMessage(inputValue, selectedImage || undefined);
+    sendMessage(inputValue, images);
     setInputValue('');
-    setSelectedImage(null);
+    clearImages();
     if (fileInputRef.current) fileInputRef.current.value = '';
-  }, [inputValue, selectedImage, sendMessage]);
+  }, [inputValue, images, sendMessage, clearImages]);
 
   const handleMicClick = useCallback(() => {
     if (!isSpeechSupported) {
@@ -186,19 +197,6 @@ const App: React.FC = () => {
     toggleListening();
   }, [isSpeechSupported, toggleListening]);
 
-  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setSelectedImage(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  }, []);
-
-  const handleClearImage = useCallback(() => {
-    setSelectedImage(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }, []);
 
   const handleClearChat = useCallback(() => {
     if (window.confirm(CONFIRMATIONS.CLEAR_CHAT)) {
@@ -364,73 +362,89 @@ const App: React.FC = () => {
         />
       </div>
 
-      <main
-        ref={containerRef}
-        id="main-content"
-        className="flex-1 relative overflow-y-auto scroll-smooth custom-scrollbar"
-        role="main"
-        aria-label="Chat history"
+      <ImageDropZone
+        isDragging={isDragging}
+        onDrop={(e) => {
+          setIsDragging(false);
+          handleDrop(e);
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
       >
-        {isSearching ? (
-          <SearchResults
-            results={results}
-            onResultClick={(id) => {
-              clearSearch();
-              setTimeout(() => {
-                const el = document.getElementById('message-' + id);
-                el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 100);
-            }}
-            query={query}
-          />
-        ) : (
-          <div className="w-full max-w-4xl mx-auto min-h-full pb-32 pt-4 px-4 sm:px-6">
-            {!hasMessages ? (
-              <WelcomeScreen onSuggestionClick={handleSuggestionClick} />
-            ) : (
-              <SmartMessageList
-                messages={messages}
-                isTyping={orbState === OrbState.THINKING}
-                onSpeak={handleSpeak}
-                onReaction={addReaction}
-
-                getSiblingInfo={getSiblingInfo}
-                onNavigateBranch={navigateUncles}
-                onBranchCreate={createBranch}
-
-                virtualizationThreshold={VIRTUALIZATION_THRESHOLD}
-                autoScrollToBottom={true}
-              />
-            )}
-            <div ref={messagesEndRef} className="h-4" />
-          </div>
-        )}
-
-        <div className="sr-only" role="status" aria-live="polite">
-          {getOrbStatusDescription(orbState)}
-        </div>
-
-        <div
-          className="sticky top-0 z-0 w-full flex justify-center h-0 pointer-events-none"
-          aria-hidden="true"
+        <main
+          ref={containerRef}
+          id="main-content"
+          className="flex-1 relative overflow-y-auto scroll-smooth custom-scrollbar h-full"
+          role="main"
+          aria-label="Chat history"
         >
-          <div className={`absolute top-0 transform -translate-y-4 ${prefersReducedMotion ? 'motion-reduce' : ''}`}>
-            <OrbErrorBoundary>
-              <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
-            </OrbErrorBoundary>
+          {isSearching ? (
+            <SearchResults
+              results={results}
+              onResultClick={(id) => {
+                clearSearch();
+                setTimeout(() => {
+                  const el = document.getElementById('message-' + id);
+                  el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+              }}
+              query={query}
+            />
+          ) : (
+            <div className="w-full max-w-4xl mx-auto min-h-full pb-32 pt-4 px-4 sm:px-6">
+              {!hasMessages ? (
+                <WelcomeScreen onSuggestionClick={handleSuggestionClick} />
+              ) : (
+                <SmartMessageList
+                  messages={messages}
+                  isTyping={orbState === OrbState.THINKING}
+                  onSpeak={handleSpeak}
+                  onReaction={addReaction}
+
+                  getSiblingInfo={getSiblingInfo}
+                  onNavigateBranch={navigateUncles}
+                  onBranchCreate={createBranch}
+
+                  virtualizationThreshold={VIRTUALIZATION_THRESHOLD}
+                  autoScrollToBottom={true}
+                />
+              )}
+              <div ref={messagesEndRef} className="h-4" />
+            </div>
+          )}
+
+          <div className="sr-only" role="status" aria-live="polite">
+            {getOrbStatusDescription(orbState)}
           </div>
-        </div>
-      </main>
+
+          <div
+            className="sticky top-0 z-0 w-full flex justify-center h-0 pointer-events-none"
+            aria-hidden="true"
+          >
+            <div className={`absolute top-0 transform -translate-y-4 ${prefersReducedMotion ? 'motion-reduce' : ''}`}>
+              <OrbErrorBoundary>
+                <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
+              </OrbErrorBoundary>
+            </div>
+          </div>
+        </main>
+      </ImageDropZone>
 
       <InputArea
         inputValue={inputValue}
-        onInputChange={setInputValue}
+        setInputValue={setInputValue}
         onSend={handleSend}
         onMicClick={handleMicClick}
-        onImageSelect={handleImageSelect}
+        // New Multi-modal props
+        images={images}
+        onImageSelect={handleFileSelect}
+        onRemoveImage={removeImage}
+        onPaste={handlePaste}
+
         onStopGeneration={stopGeneration}
-        onClearImage={handleClearImage}
-        selectedImage={selectedImage}
         isGenerating={isGenerating}
         isListening={isListening}
         fileInputRef={fileInputRef}

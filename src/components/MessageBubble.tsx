@@ -72,12 +72,21 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           }
         `}
       >
-        {/* Render Image if exists */}
-        {message.image && (
+        {/* Render Image Grid or Single Image */}
+        {(message.images && message.images.length > 0) ? (
+          <div className={`mb-3 grid gap-2 ${message.images.length > 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {message.images.map((img, idx) => (
+              <div key={idx} className="rounded-lg overflow-hidden border border-black/10 dark:border-white/10 relative group">
+                <SafeImage src={img} alt={`Attachment ${idx + 1}`} className="w-full h-auto object-cover max-h-[300px]" />
+              </div>
+            ))}
+          </div>
+        ) : message.image ? (
+          // Legacy / Single fallback
           <div className="mb-3 rounded-lg overflow-hidden border border-black/10 dark:border-white/10">
             <SafeImage src={message.image} alt="User upload" className="max-w-full h-auto max-h-[300px] object-cover" />
           </div>
-        )}
+        ) : null}
 
         {/* Render Markdown Content */}
         <div className="markdown-body text-sm md:text-base leading-relaxed break-words">

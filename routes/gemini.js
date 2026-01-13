@@ -25,7 +25,7 @@ const getAI = () => {
  */
 router.post('/chat', async (req, res) => {
     try {
-        const { modelName, systemInstruction, history, newMessage, image } = req.body;
+        const { modelName, systemInstruction, history, newMessage, images, image } = req.body; // Support legacy 'image'
 
         // Validate required fields
         if (!modelName || !newMessage) {
@@ -40,7 +40,20 @@ router.post('/chat', async (req, res) => {
         const contents = (history || []).map(msg => {
             const parts = [{ text: msg.text }];
 
-            if (msg.image) {
+            // Handle multiple images (new)
+            if (msg.images && Array.isArray(msg.images)) {
+                msg.images.forEach(img => {
+                    const [mimeType, data] = img.split(';base64,');
+                    parts.unshift({
+                        inlineData: {
+                            mimeType: mimeType.replace('data:', ''),
+                            data: data
+                        }
+                    });
+                });
+            }
+            // Handle single image (legacy)
+            else if (msg.image) {
                 const [mimeType, data] = msg.image.split(';base64,');
                 parts.unshift({
                     inlineData: {
@@ -55,7 +68,21 @@ router.post('/chat', async (req, res) => {
 
         // Construct current message parts
         const currentParts = [{ text: newMessage }];
-        if (image) {
+
+        // Handle new multiple images
+        if (images && Array.isArray(images)) {
+            images.forEach(img => {
+                const [mimeType, data] = img.split(';base64,');
+                currentParts.unshift({
+                    inlineData: {
+                        mimeType: mimeType.replace('data:', ''),
+                        data: data
+                    }
+                });
+            });
+        }
+        // Handle legacy single image
+        else if (image) {
             const [mimeType, data] = image.split(';base64,');
             currentParts.unshift({
                 inlineData: {

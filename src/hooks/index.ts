@@ -15,3 +15,4 @@ export { useTheme } from './useTheme';
 export { useOnlineStatus } from './useOnlineStatus';
 export { useMessageSearch } from './useMessageSearch';
 export { useConversationTree } from './useConversationTree';
+export { useImageInput } from './useImageInput';

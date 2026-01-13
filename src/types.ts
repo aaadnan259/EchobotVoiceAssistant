@@ -12,7 +12,8 @@ export interface Message {
   role: 'user' | 'model';
   text: string;
   timestamp: number;
-  image?: string; // Base64 data URI
+  image?: string; // Base64 data URI (Legacy / Single)
+  images?: string[]; // Multiple images support
   groundingMetadata?: {
     groundingChunks?: Array<{
       web?: { uri: string; title: string };
