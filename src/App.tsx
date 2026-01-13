@@ -329,21 +329,18 @@ const App: React.FC = () => {
       <div className="absolute inset-0 pointer-events-none opacity-0 dark:opacity-100 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1e1b4b] via-[#0B0D18] to-[#000000]" aria-hidden="true" />
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" aria-hidden="true" />
 
-      {/* TopBar with new actions */}
+      {/* Header - Fixed at top */}
       <TopBar
         isDarkMode={isDarkMode}
         toggleTheme={toggleTheme}
         onReset={handleReset}
-        onSaveChat={handleSaveChat} // Kept for compatibility if needed, or remove if TopBar doesn't use it anymore
+        onSaveChat={handleSaveChat}
         onClearChat={handleClearChat}
         onOpenSettings={() => setIsSettingsOpen(true)}
-
-        // New props
         isMicActive={orbState === OrbState.LISTENING}
         onMicToggle={handleMicClick}
-        isVoiceEnabled={!!settings.voiceURI} // Simplistic check
+        isVoiceEnabled={!!settings.voiceSettings?.voiceURI}
         onVoiceToggle={() => {/* toggle voice logic if needed */ }}
-
         onExportClick={() => setIsExportOpen(true)}
         onImportClick={() => setIsImportOpen(true)}
         onShortcutsClick={() => setIsShortcutsOpen(true)}
@@ -358,8 +355,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-
-
+      {/* Main Content Area */}
       <ImageDropZone
         isDragging={isDragging}
         onDrop={(e) => {
@@ -371,14 +367,24 @@ const App: React.FC = () => {
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
+        className="flex-1 overflow-hidden flex flex-col"
       >
         <main
           ref={containerRef}
           id="main-content"
-          className="flex-1 relative overflow-y-auto scroll-smooth custom-scrollbar h-full"
+          className="flex-1 overflow-y-auto scroll-smooth custom-scrollbar relative"
           role="main"
           aria-label="Chat history"
         >
+          {/* Static Sticky Orb */}
+          <div className="sticky top-0 z-10 w-full flex justify-center py-8 pointer-events-none">
+            <div className="relative">
+              <OrbErrorBoundary>
+                <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
+              </OrbErrorBoundary>
+            </div>
+          </div>
+
           {isSearching ? (
             <SearchResults
               results={results}
@@ -392,24 +398,18 @@ const App: React.FC = () => {
               query={query}
             />
           ) : (
-            <div className="w-full max-w-4xl mx-auto min-h-full pb-32 pt-4 px-4 sm:px-6">
-              {!hasMessages ? (
-                <WelcomeScreen onSuggestionClick={handleSuggestionClick} />
-              ) : (
-                <SmartMessageList
-                  messages={messages}
-                  isTyping={orbState === OrbState.THINKING}
-                  onSpeak={handleSpeak}
-                  onReaction={addReaction}
-
-                  getSiblingInfo={getSiblingInfo}
-                  onNavigateBranch={navigateUncles}
-                  onBranchCreate={createBranch}
-
-                  virtualizationThreshold={VIRTUALIZATION_THRESHOLD}
-                  autoScrollToBottom={true}
-                />
-              )}
+            <div className="w-full max-w-4xl mx-auto pb-32 px-4 sm:px-6">
+              <SmartMessageList
+                messages={messages}
+                isTyping={orbState === OrbState.THINKING}
+                onSpeak={handleSpeak}
+                onReaction={addReaction}
+                getSiblingInfo={getSiblingInfo}
+                onNavigateBranch={navigateUncles}
+                onBranchCreate={createBranch}
+                virtualizationThreshold={VIRTUALIZATION_THRESHOLD}
+                autoScrollToBottom={true}
+              />
               <div ref={messagesEndRef} className="h-4" />
             </div>
           )}
@@ -417,34 +417,19 @@ const App: React.FC = () => {
           <div className="sr-only" role="status" aria-live="polite">
             {getOrbStatusDescription(orbState)}
           </div>
-
-          <div
-            className={`transition-all duration-700 ease-in-out z-10 pointer-events-none fixed left-0 right-0 flex justify-center ${!hasMessages
-                ? 'top-[35%] transform scale-125'
-                : 'top-[85px] transform scale-75'
-              }`}
-            aria-hidden="true"
-          >
-            <div className={prefersReducedMotion ? 'motion-reduce' : ''}>
-              <OrbErrorBoundary>
-                <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
-              </OrbErrorBoundary>
-            </div>
-          </div>
         </main>
       </ImageDropZone>
 
+      {/* Input Bar - Fixed at bottom */}
       <InputArea
         inputValue={inputValue}
         setInputValue={setInputValue}
         onSend={handleSend}
         onMicClick={handleMicClick}
-        // New Multi-modal props
         images={images}
         onImageSelect={handleFileSelect}
         onRemoveImage={removeImage}
         onPaste={handlePaste}
-
         onStopGeneration={stopGeneration}
         isGenerating={isGenerating}
         isListening={isListening}
@@ -483,7 +468,6 @@ const App: React.FC = () => {
         messages={messages}
         settings={settings}
       />
-
     </div>
   );
 };

@@ -27,7 +27,7 @@ const Orb: React.FC<OrbProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
 
     const updateEyes = () => {
       if (!svgRef.current) return;
-      
+
       const rect = svgRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
@@ -35,7 +35,7 @@ const Orb: React.FC<OrbProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
       // Calculate vector to mouse
       const dx = mousePos.x - centerX;
       const dy = mousePos.y - centerY;
-      
+
       // Limit movement radius (keep pupils inside orb)
       const maxDist = 15; // Max pixels pupils can move
       const angle = Math.atan2(dy, dx);
@@ -57,8 +57,8 @@ const Orb: React.FC<OrbProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
     if (state !== OrbState.ERROR && state !== OrbState.THINKING) {
       updateEyes();
     } else {
-        // Reset eyes for error/thinking
-        setEyePos({x: 0, y: 0});
+      // Reset eyes for error/thinking
+      setEyePos({ x: 0, y: 0 });
     }
 
     return () => cancelAnimationFrame(animationFrameId);
@@ -86,19 +86,19 @@ const Orb: React.FC<OrbProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
       );
     }
     if (state === OrbState.THINKING) {
-       return (
+      return (
         <g className="animate-pulse">
-           <circle cx="-15" cy="0" r="4" fill="white" />
-           <circle cx="0" cy="0" r="4" fill="white" />
-           <circle cx="15" cy="0" r="4" fill="white" />
+          <circle cx="-15" cy="0" r="4" fill="white" />
+          <circle cx="0" cy="0" r="4" fill="white" />
+          <circle cx="15" cy="0" r="4" fill="white" />
         </g>
-       );
+      );
     }
-    
+
     // Normal Eyes
     const blinkClass = state === OrbState.IDLE ? 'animate-[blink_4s_infinite]' : '';
     const widenClass = state === OrbState.LISTENING ? 'scale-y-125' : '';
-    
+
     return (
       <g transform={`translate(${eyePos.x}, ${eyePos.y})`}>
         <g className={`${blinkClass} ${widenClass} transition-transform duration-200`}>
@@ -115,27 +115,27 @@ const Orb: React.FC<OrbProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
   const scrollScale = Math.max(0.5, 1 - scrollProgress * 1.5);
   // Audio reactivity: Base 1, add volume. 
   // If not talking, audioLevel is 0. If talking, pulses up to ~1.3x
-  const reactivity = 1 + (audioLevel * 0.3); 
+  const reactivity = 1 + (audioLevel * 0.3);
   const totalScale = scrollScale * reactivity;
-  
+
   const translateY = scrollProgress * 20; // Move up slightly as it shrinks
 
   return (
-    <div 
+    <div
       className={`relative flex justify-center items-center transition-transform duration-75 ease-out z-10 pointer-events-none
         ${state === OrbState.IDLE ? 'orb-float' : ''}
         ${state === OrbState.ERROR ? 'orb-shake' : ''}
         ${state === OrbState.THINKING ? 'orb-pulse' : ''}
       `}
       style={{
-        transform: `scale(${totalScale}) translateY(${translateY}px)`,
-        opacity: Math.max(0.2, 1 - scrollProgress * 0.5) // Fade slightly but never disappear
+        transform: `scale(${reactivity})`, // Only audio reactivity, no scroll scaling
+        opacity: 1 // No fade
       }}
     >
-      <svg 
+      <svg
         ref={svgRef}
         viewBox="-80 -80 160 160"
-        className="drop-shadow-2xl transition-all duration-300 w-32 h-32 md:w-40 md:h-40" 
+        className="drop-shadow-2xl transition-all duration-300 w-40 h-40 md:w-48 md:h-48"
         style={{
           filter: `drop-shadow(0 0 ${30 + (audioLevel * 20)}px ${getGlowColor()})`
         }}
@@ -150,22 +150,22 @@ const Orb: React.FC<OrbProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
 
         {/* Outer Halo for Listening */}
         {state === OrbState.LISTENING && (
-           <circle cx="0" cy="0" r="75" fill="none" stroke="white" strokeWidth="1" opacity="0.5">
-             <animate attributeName="r" values="60;80;60" dur="2s" repeatCount="indefinite" />
-             <animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite" />
-           </circle>
+          <circle cx="0" cy="0" r="75" fill="none" stroke="white" strokeWidth="1" opacity="0.5">
+            <animate attributeName="r" values="60;80;60" dur="2s" repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.5;0;0.5" dur="2s" repeatCount="indefinite" />
+          </circle>
         )}
 
         {/* Main Body */}
         <circle cx="0" cy="0" r="60" fill="url(#orbGradient)" />
-        
+
         {/* Specular Highlight */}
         <ellipse cx="-25" cy="-25" rx="15" ry="10" fill="white" opacity="0.3" transform="rotate(-45)" />
 
         {/* Eyes Layer */}
         {getEyeShape()}
       </svg>
-      
+
       {/* CSS Keyframes injected here for unique eye animations */}
       <style>{`
         @keyframes blink {
