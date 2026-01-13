@@ -11,3 +11,4 @@ export { useReducedMotion } from './useReducedMotion';
 export { useFocusTrap } from './useFocusTrap';
 export { useVirtualization } from './useVirtualization';
 export { useOnlineStatus } from './useOnlineStatus';
+export { useMessageSearch } from './useMessageSearch';

@@ -13,6 +13,14 @@ export {
 // The user provided 'Index TS' which exports SafeContent. I'll trust the user provided code block for components index.
 export {
     VirtualizedMessageList,
-    SimpleMessageList,
     SmartMessageList
 } from './VirtualizedMessageList';
+export { default as WelcomeScreen } from './WelcomeScreen';
+export { TopBar } from './TopBar';
+export { InputBar as InputArea } from './InputBar';
+export { default as OrbCanvas } from './OrbCanvas';
+export { default as KeyboardShortcuts } from './KeyboardShortcuts';
+export { default as Orb } from './Orb';
+export { default as SettingsModal } from './SettingsModal';
+export { SearchBar } from './SearchBar';
+export { SearchResults } from './SearchResults';
