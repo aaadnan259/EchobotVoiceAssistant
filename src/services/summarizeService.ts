@@ -1,6 +1,6 @@
 import { Message } from '../types';
 import { getGeminiResponse } from './geminiService';
-import { APP_CONFIG } from '../constants'; // Assumed to exist, or we use hardcoded model for now
+import { API_CONFIG } from '../constants';
 
 export type SummaryLength = 'short' | 'medium' | 'long';
 export type SummaryFocus = 'general' | 'action-items' | 'decisions';
@@ -25,7 +25,7 @@ const FOCUS_PROMPTS: Record<SummaryFocus, string> = {
 export async function summarizeConversation(
     messages: Message[],
     options: SummaryOptions = { length: 'medium', focus: 'general' },
-    modelName: string = 'gemini-2.0-flash' // Default model
+    modelName: string = API_CONFIG.MODEL_NAME
 ): Promise<string> {
     if (!messages || messages.length === 0) {
         return 'No conversation history to summarize.';
