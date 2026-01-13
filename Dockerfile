@@ -25,7 +25,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Copy built frontend from Stage 1
-COPY --from=frontend-build /app/build ./build
+# We copy to /app/build, so app.py finds it at /app/build or ./build
+COPY --from=frontend-build /app/build /app/build
 
 # Environment Variables
 ENV PYTHONUNBUFFERED=1
