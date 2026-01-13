@@ -6,7 +6,7 @@ import {
   useSettings,
   useSpeechRecognition,
   useSpeechSynthesis,
-  useWebSocket,
+  useSecureWebSocket,
   useChat,
   useScrollBehavior,
   useAudioAnalyzer,
@@ -300,8 +300,8 @@ const App: React.FC = () => {
     onError: () => setOrbState(OrbState.IDLE)
   });
 
-  // --- WebSocket ---
-  useWebSocket({
+  // --- WebSocket (Secure) ---
+  useSecureWebSocket({
     onConnect: () => toast.success(SUCCESS.CONNECTED),
     onMessage: (data) => {
       if (data.type === 'error') {
