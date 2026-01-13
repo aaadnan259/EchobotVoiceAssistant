@@ -353,7 +353,7 @@ const App: React.FC = () => {
             ) : (
               <SmartMessageList
                 messages={messages}
-                isThinking={orbState === OrbState.THINKING || orbState === OrbState.RESPONDING}
+                isTyping={orbState === OrbState.THINKING}
                 onSpeak={handleSpeak}
                 onReaction={addReaction}
 

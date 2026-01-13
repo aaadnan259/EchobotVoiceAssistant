@@ -13,6 +13,7 @@ const AutoSizer = (AutoSizerModule as any).default || AutoSizerModule;
 import { Message } from '../types';
 import MessageBubble from './MessageBubble';
 import { MessageErrorBoundary } from './ErrorBoundaries';
+import { TypingIndicator } from './TypingIndicator';
 
 interface VirtualizedMessageListProps {
     messages: Message[];
@@ -28,6 +29,8 @@ interface VirtualizedMessageListProps {
     estimatedItemSize?: number;
     /** Whether to auto-scroll to bottom when new messages arrive */
     autoScrollToBottom?: boolean;
+    /** Show typing indicator */
+    isTyping?: boolean;
 }
 
 // Cache for measured item heights
@@ -112,12 +115,15 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     onBranchCreate,
     estimatedItemSize = DEFAULT_ITEM_HEIGHT,
     autoScrollToBottom = true,
+    isTyping
 }) => {
     const listRef = useRef<List>(null);
     const heightCacheRef = useRef<Map<string, number>>(itemHeightCache);
 
     // Get item height from cache or return estimate
     const getItemHeight = useCallback((index: number): number => {
+        if (isTyping && index === messages.length) return 60; // Fixed height for indicator
+
         const message = messages[index];
         if (!message) return estimatedItemSize;
 
@@ -169,6 +175,15 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 
     // Render each row
     const renderRow = useCallback(({ index, style }: ListChildComponentProps) => {
+        // If typing, the last item is the indicator
+        if (isTyping && index === messages.length) {
+            return (
+                <div style={style} className="py-1">
+                    <TypingIndicator />
+                </div>
+            );
+        }
+
         const message = messages[index];
         if (!message) return null;
 
@@ -210,7 +225,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
                         ref={listRef}
                         height={height}
                         width={width}
-                        itemCount={messages.length}
+                        itemCount={messages.length + (isTyping ? 1 : 0)}
                         itemSize={getItemHeight}
                         itemKey={getItemKey}
                         estimatedItemSize={estimatedItemSize}
@@ -236,20 +251,22 @@ export const SimpleMessageList: React.FC<{
     getSiblingInfo?: (id: string) => any;
     onNavigateBranch?: (id: string, direction: 'prev' | 'next') => void;
     onBranchCreate?: (id: string) => void;
-}> = memo(({ messages, onSpeak, onReaction, getSiblingInfo, onNavigateBranch, onBranchCreate }) => (
+    isTyping?: boolean;
+}> = memo((props) => (
     <>
-        {messages.map(msg => (
+        {props.messages.map(msg => (
             <MessageErrorBoundary key={msg.id}>
                 <MessageBubble
                     message={msg}
-                    onSpeak={onSpeak}
-                    onReaction={onReaction}
-                    siblingInfo={getSiblingInfo?.(msg.id)}
-                    onNavigateBranch={onNavigateBranch ? (dir) => onNavigateBranch(msg.id, dir) : undefined}
-                    onBranchCreate={onBranchCreate ? () => onBranchCreate(msg.id) : undefined}
+                    onSpeak={props.onSpeak}
+                    onReaction={props.onReaction}
+                    siblingInfo={props.getSiblingInfo?.(msg.id)}
+                    onNavigateBranch={props.onNavigateBranch ? (dir) => props.onNavigateBranch?.(msg.id, dir) : undefined}
+                    onBranchCreate={props.onBranchCreate ? () => props.onBranchCreate?.(msg.id) : undefined}
                 />
             </MessageErrorBoundary>
         ))}
+        {props.isTyping && <TypingIndicator />}
     </>
 ));
 
@@ -272,6 +289,7 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
     onNavigateBranch,
     onBranchCreate,
 
+    isTyping,
     virtualizationThreshold = 50,
     ...props
 }) => {
@@ -285,6 +303,7 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
                     getSiblingInfo={getSiblingInfo}
                     onNavigateBranch={onNavigateBranch}
                     onBranchCreate={onBranchCreate}
+                    isTyping={isTyping}
                 />
             );
         }
@@ -298,6 +317,7 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
                 getSiblingInfo={getSiblingInfo}
                 onNavigateBranch={onNavigateBranch}
                 onBranchCreate={onBranchCreate}
+                isTyping={isTyping}
                 {...props}
             />
         );

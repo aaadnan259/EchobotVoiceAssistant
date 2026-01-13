@@ -172,3 +172,24 @@
     caret-color: black;
   }
 }
+
+@layer utilities {
+  .typing-dot {
+    animation: typing-bounce 1.4s infinite ease-in-out both;
+  }
+
+  @keyframes typing-bounce {
+
+    0%,
+    80%,
+    100% {
+      transform: translateY(0);
+      opacity: 0.5;
+    }
+
+    40% {
+      transform: translateY(-6px);
+      opacity: 1;
+    }
+  }
+}
