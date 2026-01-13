@@ -101,26 +101,25 @@ export function TopBar({
         </div>
 
         {/* Right: Action Icons */}
-        <div className="flex items-center gap-3">
-
-          {/* Task 2: Search Bar */}
-          <div className="relative flex items-center mr-2">
+        <div className="flex items-center gap-1">
+          {/* Search - Collapsible */}
+           <div className="relative flex items-center mr-2">
             <div className={`
                 flex items-center transition-all duration-300 ease-in-out overflow-hidden
-                ${isSearchOpen ? 'w-64 opacity-100' : 'w-0 opacity-0'}
+                ${isSearchOpen ? 'w-48 opacity-100' : 'w-0 opacity-0'}
             `}>
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Search history..."
-                className="w-full h-9 pl-3 pr-8 rounded-full bg-gray-100 dark:bg-white/10 border border-transparent dark:border-white/10 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                placeholder="Search messages..."
+                className="w-full h-8 px-3 text-sm rounded-lg bg-gray-100 dark:bg-white/10 border border-transparent dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               />
-              {searchQuery && (
+               {searchQuery && (
                 <button
                   onClick={() => onSearchChange('')}
-                  className="absolute right-2 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
+                  className="absolute right-2 p-1 text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <X size={14} />
                 </button>
@@ -128,107 +127,58 @@ export function TopBar({
             </div>
 
             <button
-              onClick={() => {
+               onClick={() => {
                 if (isSearchOpen && !searchQuery) setIsSearchOpen(false);
                 else {
                   setIsSearchOpen(true);
                   setTimeout(() => searchInputRef.current?.focus(), 10);
                 }
               }}
-              className={`p-2 rounded-full transition-colors ${isSearchOpen ? 'bg-purple-500/10 text-purple-500' : 'hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300'}`}
+              className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors group"
               title="Search messages (Ctrl+F)"
             >
-              <Search className="w-5 h-5" />
+              <Search className="w-5 h-5 text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
             </button>
           </div>
 
-          <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1 hidden sm:block" />
-
-          {/* Core Actions Group */}
-          <button
-            onClick={onReset}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors hidden md:block"
-            title="Reset Chat"
-          >
-            <RotateCcw className="w-5 h-5" />
-          </button>
-
+          {/* Save */}
           <button
             onClick={onSaveChat}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors hidden md:block"
-            title="Quick Save"
+            className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors group"
+            title="Save chat"
           >
-            <Save className="w-5 h-5" />
+            <Download className="w-5 h-5 text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
           </button>
 
+          {/* Clear */}
           <button
-            onClick={onExportClick}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors"
-            title="Export"
+            onClick={onClearChat}
+            className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors group"
+            title="Clear chat"
           >
-            <Download className="w-5 h-5" />
+            <Trash2 className="w-5 h-5 text-gray-400 group-hover:text-red-500 dark:group-hover:text-red-400 transition-colors" />
           </button>
 
-          <button
-            onClick={onImportClick}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors"
-            title="Import"
-          >
-            <Upload className="w-5 h-5" />
-          </button>
-
-          <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1 hidden sm:block" />
-
-          {/* Settings & System */}
-          <button
-            onClick={onShortcutsClick}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors hidden sm:block"
-            title="Shortcuts"
-          >
-            <Keyboard className="w-5 h-5" />
-          </button>
-
-          <button
+           {/* Theme Toggle */}
+           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors"
-            title="Toggle Theme"
+            className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors group"
+            title="Toggle theme"
           >
-            {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {isDarkMode ? (
+              <Sun className="w-5 h-5 text-gray-400 group-hover:text-yellow-500 dark:group-hover:text-yellow-400 transition-colors" />
+            ) : (
+              <Moon className="w-5 h-5 text-gray-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors" />
+            )}
           </button>
 
+          {/* Settings */}
           <button
             onClick={onOpenSettings}
-            className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 transition-colors"
+            className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors group"
             title="Settings"
           >
-            <Settings className="w-5 h-5" />
-          </button>
-
-          <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1" />
-
-          {/* Voice Controls */}
-          <button
-            onClick={onVoiceToggle}
-            className={`p-2 rounded-full transition-colors ${!isVoiceEnabled ? 'text-red-500 bg-red-500/10' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
-              }`}
-            title={isVoiceEnabled ? "Mute Voice" : "Enable Voice"}
-          >
-            {isVoiceEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-          </button>
-
-          <button
-            onClick={onMicToggle}
-            className={`p-2 rounded-full transition-all duration-300 transform hover:scale-105 ${isMicActive
-                ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30'
-              }`}
-            title={isMicActive ? "Stop Listening" : "Start Listening"}
-          >
-            {isMicActive ? (
-              <MicOff className="w-5 h-5" />
-            ) : (
-              <Mic className="w-5 h-5" />
-            )}
+            <Settings className="w-5 h-5 text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
           </button>
         </div>
       </div>
