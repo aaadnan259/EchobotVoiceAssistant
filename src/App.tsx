@@ -377,7 +377,7 @@ const App: React.FC = () => {
           aria-label="Chat history"
         >
           {/* Static Sticky Orb */}
-          <div className="sticky top-0 z-10 w-full flex justify-center pt-12 pb-6 pointer-events-none">
+          <div className="sticky top-0 z-10 w-full flex justify-center pt-20 pb-6 pointer-events-none">
             <div className="relative">
               <OrbErrorBoundary>
                 <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
