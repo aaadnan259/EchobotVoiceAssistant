@@ -25,3 +25,4 @@ export { default as SettingsModal } from './SettingsModal';
 export { SearchBar } from './SearchBar';
 export { SearchResults } from './SearchResults';
 export { MessageReactions } from './MessageReactions';
+export { BranchSelector } from './BranchSelector';

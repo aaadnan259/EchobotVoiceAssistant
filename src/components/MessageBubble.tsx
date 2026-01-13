@@ -5,11 +5,15 @@ import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Message } from '../types';
 import { SafeImage, SafeLink } from './SafeContent';
 import { MessageReactions } from './MessageReactions';
+import { BranchSelector } from './BranchSelector';
 
 interface MessageBubbleProps {
   message: Message;
   onSpeak: (text: string) => void;
   onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
+  siblingInfo?: { current: number; total: number; hasPrev: boolean; hasNext: boolean };
+  onNavigateBranch?: (direction: 'prev' | 'next') => void;
+  onBranchCreate?: () => void;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -36,7 +40,14 @@ const CopyButton = ({ text }: { text: string }) => {
   );
 };
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onSpeak, onReaction }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({
+  message,
+  onSpeak,
+  onReaction,
+  siblingInfo,
+  onNavigateBranch,
+  onBranchCreate
+}) => {
   const isUser = message.role === 'user';
 
   // Extract sources if available
@@ -125,16 +136,42 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onSpeak, onReact
           </div>
         )}
 
-        {/* Footer: Timestamp & Actions */}
-        <div className="flex items-center justify-between mt-2 pt-1 border-t border-black/5 dark:border-white/5">
+      </div>
+
+      {/* Footer Actions */}
+      <div className="flex items-center justify-between mt-2 pt-1 border-t border-black/5 dark:border-white/5">
+        <div className="flex items-center gap-2">
           <span className="text-[10px] opacity-50 uppercase tracking-widest">
             {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
 
+          {/* Branch Selector */}
+          {siblingInfo && siblingInfo.total > 1 && onNavigateBranch && (
+            <BranchSelector
+              currentBranch={siblingInfo.current}
+              totalBranches={siblingInfo.total}
+              onPrev={() => onNavigateBranch('prev')}
+              onNext={() => onNavigateBranch('next')}
+            />
+          )}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {/* Regenerate Button (Create Branch) */}
+          {!isUser && onBranchCreate && (
+            <button
+              onClick={onBranchCreate}
+              className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100 mr-1"
+              title="Regenerate response"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" /></svg>
+            </button>
+          )}
+
           {!isUser && message.text && (
             <button
               onClick={() => onSpeak(message.text)}
-              className="ml-2 p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100"
+              className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors opacity-60 hover:opacity-100"
               title="Read aloud"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -144,13 +181,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onSpeak, onReact
             </button>
           )}
         </div>
-
-        {/* Reactions */}
-        {onReaction && (
-          <MessageReactions message={message} onReaction={onReaction} />
-        )}
       </div>
+
+      {/* Reactions - Separate row */}
+      {onReaction && (
+        <MessageReactions message={message} onReaction={onReaction} />
+      )}
     </div>
+
   );
 };
 

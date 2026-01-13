@@ -18,6 +18,12 @@ interface VirtualizedMessageListProps {
     messages: Message[];
     onSpeak: (text: string) => void;
     onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
+
+    // Branching props
+    getSiblingInfo?: (id: string) => { current: number; total: number; hasPrev: boolean; hasNext: boolean } | null;
+    onNavigateBranch?: (id: string, direction: 'prev' | 'next') => void;
+    onBranchCreate?: (id: string) => void;
+
     /** Estimated height of each message row (will be measured dynamically) */
     estimatedItemSize?: number;
     /** Whether to auto-scroll to bottom when new messages arrive */
@@ -40,12 +46,21 @@ const MessageRow = memo(({
     message,
     onSpeak,
     setHeight,
-    style
+    style,
+    getSiblingInfo,
+    onNavigateBranch,
+    onBranchCreate
 }: {
     message: Message;
     onSpeak: (text: string) => void;
     onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
+
+    getSiblingInfo?: (id: string) => any;
+    onNavigateBranch?: (id: string, direction: 'prev' | 'next') => void;
+    onBranchCreate?: (id: string) => void;
+
     setHeight: (id: string, height: number) => void;
+
     style: React.CSSProperties;
 }) => {
     const rowRef = useRef<HTMLDivElement>(null);
@@ -63,7 +78,14 @@ const MessageRow = memo(({
         <div style={style}>
             <div ref={rowRef} className="py-1">
                 <MessageErrorBoundary>
-                    <MessageBubble message={message} onSpeak={onSpeak} onReaction={onReaction} />
+                    <MessageBubble
+                        message={message}
+                        onSpeak={onSpeak}
+                        onReaction={onReaction}
+                        siblingInfo={getSiblingInfo?.(message.id)}
+                        onNavigateBranch={onNavigateBranch ? (dir) => onNavigateBranch(message.id, dir) : undefined}
+                        onBranchCreate={onBranchCreate ? () => onBranchCreate(message.id) : undefined}
+                    />
                 </MessageErrorBoundary>
             </div>
         </div>
@@ -85,6 +107,9 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     messages,
     onSpeak,
     onReaction,
+    getSiblingInfo,
+    onNavigateBranch,
+    onBranchCreate,
     estimatedItemSize = DEFAULT_ITEM_HEIGHT,
     autoScrollToBottom = true,
 }) => {
@@ -153,6 +178,11 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
                 message={message}
                 onSpeak={onSpeak}
                 onReaction={onReaction}
+
+                getSiblingInfo={getSiblingInfo}
+                onNavigateBranch={onNavigateBranch}
+                onBranchCreate={onBranchCreate}
+
                 setHeight={setItemHeight}
                 style={style}
             />
@@ -203,11 +233,21 @@ export const SimpleMessageList: React.FC<{
     messages: Message[];
     onSpeak: (text: string) => void;
     onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
-}> = memo(({ messages, onSpeak, onReaction }) => (
+    getSiblingInfo?: (id: string) => any;
+    onNavigateBranch?: (id: string, direction: 'prev' | 'next') => void;
+    onBranchCreate?: (id: string) => void;
+}> = memo(({ messages, onSpeak, onReaction, getSiblingInfo, onNavigateBranch, onBranchCreate }) => (
     <>
         {messages.map(msg => (
             <MessageErrorBoundary key={msg.id}>
-                <MessageBubble message={msg} onSpeak={onSpeak} onReaction={onReaction} />
+                <MessageBubble
+                    message={msg}
+                    onSpeak={onSpeak}
+                    onReaction={onReaction}
+                    siblingInfo={getSiblingInfo?.(msg.id)}
+                    onNavigateBranch={onNavigateBranch ? (dir) => onNavigateBranch(msg.id, dir) : undefined}
+                    onBranchCreate={onBranchCreate ? () => onBranchCreate(msg.id) : undefined}
+                />
             </MessageErrorBoundary>
         ))}
     </>
@@ -226,12 +266,27 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
     messages,
     onSpeak,
     onReaction,
+
+    // Pass through branching props
+    getSiblingInfo,
+    onNavigateBranch,
+    onBranchCreate,
+
     virtualizationThreshold = 50,
     ...props
 }) => {
         // Use simple list for small message counts
         if (messages.length < virtualizationThreshold) {
-            return <SimpleMessageList messages={messages} onSpeak={onSpeak} onReaction={onReaction} />;
+            return (
+                <SimpleMessageList
+                    messages={messages}
+                    onSpeak={onSpeak}
+                    onReaction={onReaction}
+                    getSiblingInfo={getSiblingInfo}
+                    onNavigateBranch={onNavigateBranch}
+                    onBranchCreate={onBranchCreate}
+                />
+            );
         }
 
         // Use virtualized list for large message counts
@@ -240,6 +295,9 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
                 messages={messages}
                 onSpeak={onSpeak}
                 onReaction={onReaction}
+                getSiblingInfo={getSiblingInfo}
+                onNavigateBranch={onNavigateBranch}
+                onBranchCreate={onBranchCreate}
                 {...props}
             />
         );

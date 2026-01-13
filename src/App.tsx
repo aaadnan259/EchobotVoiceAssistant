@@ -1,8 +1,9 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { OrbState, Message } from './types';
 import { playSound, CHAT_MESSAGES } from './constants';
 import {
-  useMessages,
+  useConversationTree,
   useSettings,
   useSpeechRecognition,
   useSpeechSynthesis,
@@ -56,7 +57,19 @@ const VIRTUALIZATION_THRESHOLD = 50;
 
 const App: React.FC = () => {
   // --- Custom Hooks ---
-  const { messages, addMessage, addPlaceholder, updateMessage, clearMessages, exportMessages, addReaction } = useMessages();
+  const {
+    messages,
+    addMessage,
+    addPlaceholder,
+    updateMessage,
+    clearMessages,
+    exportMessages,
+    addReaction,
+    // Branching
+    createBranch,
+    navigateUncles,
+    getSiblingInfo
+  } = useConversationTree();
   const { settings, setSettings, toggleTheme, isDarkMode } = useSettings();
 
   const { containerRef, bottomRef, scrollProgress } = useScrollBehavior({
@@ -146,7 +159,9 @@ const App: React.FC = () => {
       if (data.audio) {
         setOrbState(OrbState.RESPONDING);
         if (audioRef.current) audioRef.current.pause();
-        const audio = new Audio(`data:audio/mpeg;base64,${data.audio}`);
+        // audio playback
+        const audioSrc = 'data:audio/mpeg;base64,' + data.audio;
+        const audio = new Audio(audioSrc);
         audioRef.current = audio;
         audio.onended = () => setOrbState(OrbState.IDLE);
         audio.play().catch(e => logger.error('Audio playback failed:', e));
@@ -304,7 +319,7 @@ const App: React.FC = () => {
               clearSearch();
               // A timeout to let the list render before scrolling could work
               setTimeout(() => {
-                const el = document.getElementById(`message-${id}`);
+                const el = document.getElementById('message-' + id);
                 el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }, 100);
             }}
@@ -320,6 +335,12 @@ const App: React.FC = () => {
                 isThinking={orbState === OrbState.THINKING || orbState === OrbState.RESPONDING}
                 onSpeak={handleSpeak}
                 onReaction={addReaction}
+
+                // Branching props
+                getSiblingInfo={getSiblingInfo}
+                onNavigateBranch={navigateUncles}
+                onBranchCreate={createBranch}
+
                 virtualizationThreshold={VIRTUALIZATION_THRESHOLD}
                 autoScrollToBottom={true}
               />

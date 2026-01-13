@@ -24,6 +24,22 @@ export interface Message {
     starred?: boolean;
   };
   feedback?: string;
+  parentId?: string | null;
+  branchId?: string;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  createdAt: number;
+  parentMessageId: string | null;
+}
+
+export interface Conversation {
+  id: string;
+  branches: Record<string, Branch>;
+  activeBranchId: string;
+  messages: Record<string, Message>;
 }
 
 export interface AppSettings {
