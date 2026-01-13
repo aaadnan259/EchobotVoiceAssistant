@@ -31,3 +31,4 @@ export { ExportModal } from './ExportModal';
 export { ImportModal } from './ImportModal';
 export { ShortcutsModal } from './ShortcutsModal';
 export { ThemePicker } from './ThemePicker';
+export { VoiceSettings } from './VoiceSettings';

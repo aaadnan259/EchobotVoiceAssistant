@@ -11,15 +11,26 @@ export function useSpeechSynthesis(options: UseSpeechSynthesisOptions = {}) {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-    const speak = useCallback((text: string, voiceURI?: string | null) => {
+    const speak = useCallback((text: string, options?: {
+        voiceURI?: string | null;
+        rate?: number;
+        pitch?: number;
+        volume?: number;
+    }) => {
         // Cancel any ongoing speech
         window.speechSynthesis.cancel();
 
         const utterance = new SpeechSynthesisUtterance(text);
         utteranceRef.current = utterance;
 
+        // Apply options
+        if (options?.rate) utterance.rate = options.rate;
+        if (options?.pitch) utterance.pitch = options.pitch;
+        if (options?.volume) utterance.volume = options.volume;
+
         const loadAndSpeak = () => {
             const voices = window.speechSynthesis.getVoices();
+            const voiceURI = options?.voiceURI;
 
             if (voiceURI) {
                 const selected = voices.find(v => v.voiceURI === voiceURI);

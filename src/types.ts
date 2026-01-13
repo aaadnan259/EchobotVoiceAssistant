@@ -63,11 +63,23 @@ export interface Theme {
   };
 }
 
+export interface VoiceSettings {
+  voiceURI: string | null;
+  rate: number;
+  pitch: number;
+  volume: number;
+  autoSpeak: boolean;
+}
+
 export interface AppSettings {
   model: string;
   systemPrompt: string;
-  voiceURI: string | null;
-  theme: string; // Theme ID
+  // voiceURI moved to voiceSettings, kept for temporary compat or removed?
+  // User request said "Update settings to include". Usually means structure change.
+  // But to avoid breaking valid code immediately, I'll keep it or map it.
+  // Implementation plan said: "Update AppSettings to include voiceSettings".
+  voiceSettings: VoiceSettings;
+  theme: string;
 }
 
 export interface VoiceOption {

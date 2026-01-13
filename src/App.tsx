@@ -220,8 +220,13 @@ const App: React.FC = () => {
   }, [exportMessages]);
 
   const handleSpeak = useCallback((text: string) => {
-    speak(text, settings.voiceURI);
-  }, [speak, settings.voiceURI]);
+    speak(text, {
+      voiceURI: settings.voiceSettings.voiceURI,
+      rate: settings.voiceSettings.rate,
+      pitch: settings.voiceSettings.pitch,
+      volume: settings.voiceSettings.volume
+    });
+  }, [speak, settings.voiceSettings]);
 
   const handleReset = useCallback(() => {
     clearMessages();

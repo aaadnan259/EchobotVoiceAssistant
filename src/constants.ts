@@ -168,7 +168,13 @@ export const DEFAULT_SETTINGS = {
 You communicate in a warm, conversational tone while being precise and informative.
 You can help with a wide variety of tasks including answering questions, creative writing, 
 coding assistance, and general conversation.`,
-    voiceURI: null as string | null,
+    voiceSettings: {
+        voiceURI: null,
+        rate: 1.0,
+        pitch: 1.0,
+        volume: 1.0,
+        autoSpeak: false,
+    },
     theme: UI_CONFIG.DEFAULT_THEME,
 } as const;
 

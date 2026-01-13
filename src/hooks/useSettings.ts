@@ -8,7 +8,20 @@ export function useSettings() {
     const [settings, setSettings] = useState<AppSettings>(() => {
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
-            return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Migration: If voiceSettings is missing, create it from legacy voiceURI or defaults
+                if (!parsed.voiceSettings) {
+                    parsed.voiceSettings = {
+                        ...DEFAULT_SETTINGS.voiceSettings,
+                        voiceURI: parsed.voiceURI || null
+                    };
+                    // Clean up legacy
+                    delete parsed.voiceURI;
+                }
+                return { ...DEFAULT_SETTINGS, ...parsed };
+            }
+            return DEFAULT_SETTINGS;
         } catch {
             return DEFAULT_SETTINGS;
         }

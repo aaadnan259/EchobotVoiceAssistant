@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ThemePicker } from './ThemePicker';
+import { VoiceSettings } from './VoiceSettings';
 import { AppSettings, VoiceOption } from '../types';
 
 interface SettingsModalProps {
@@ -78,19 +79,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
           </section>
 
           {/* Voice Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">TTS Voice</label>
-            <select
-              value={localSettings.voiceURI || ''}
-              onChange={(e) => setLocalSettings({ ...localSettings, voiceURI: e.target.value })}
-              className="w-full p-2 bg-gray-50 dark:bg-[#0B0D18] border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
-            >
-              <option value="">Default System Voice</option>
-              {voices.map(v => (
-                <option key={v.uri} value={v.uri}>{v.name} ({v.lang})</option>
-              ))}
-            </select>
-          </div>
+          <section>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">Voice & Speech</h3>
+            <VoiceSettings
+              settings={localSettings.voiceSettings}
+              onChange={(vs) => setLocalSettings(prev => ({ ...prev, voiceSettings: vs }))}
+            />
+          </section>
 
         </div>
 
