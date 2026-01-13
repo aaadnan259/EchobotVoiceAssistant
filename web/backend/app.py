@@ -389,6 +389,30 @@ async def update_settings(settings: SettingsUpdate):
     logger.info(f"Settings updated: {settings_safe}")
     return {"status": "success", "settings": settings}
 
+@app.get("/api/debug/static")
+def debug_static():
+    """Debug endpoint to check static file setup."""
+    result = {
+        "current_dir": current_dir,
+        "project_root": project_root,
+        "dist_dir": dist_dir,
+        "dist_exists": os.path.exists(dist_dir) if dist_dir else False,
+        "contents": [],
+        "index_exists": False
+    }
+    
+    if dist_dir and os.path.exists(dist_dir):
+        try:
+            result["contents"] = os.listdir(dist_dir)
+            result["index_exists"] = os.path.exists(os.path.join(dist_dir, "index.html"))
+            assets_dir = os.path.join(dist_dir, "assets")
+            if os.path.exists(assets_dir):
+                result["assets_contents"] = os.listdir(assets_dir)[:10]
+        except Exception as e:
+            result["error"] = str(e)
+    
+    return result
+
 # Catch-all for SPA handling (must be last)
 @app.get("/{full_path:path}")
 async def serve_spa_catchall(full_path: str, request: Request):
