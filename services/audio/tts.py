@@ -67,5 +67,11 @@ class TTSEngine:
             )
             return b"".join(audio) if hasattr(audio, '__iter__') and not isinstance(audio, (bytes, bytearray)) else audio
         except Exception as e:
-            logger.error(f"ElevenLabs Generation Error: {e}")
+            error_msg = str(e)
+            if "401" in error_msg or "unauthorized" in error_msg.lower():
+                 logger.error("TTS DISABLED: Invalid ElevenLabs API Key. Please check ELEVENLABS_API_KEY in .env or Render Dashboard.")
+                 # Mark unavailable to prevent retry
+                 self.voice_id = None 
+            else:
+                logger.error(f"ElevenLabs Generation Error: {e}")
             return b""

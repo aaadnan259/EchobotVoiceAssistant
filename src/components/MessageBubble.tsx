@@ -6,6 +6,7 @@ import { Message } from '../types';
 import { SafeImage, SafeLink } from './SafeContent';
 import { MessageReactions } from './MessageReactions';
 import { BranchSelector } from './BranchSelector';
+import { Bot, User } from 'lucide-react';
 
 interface MessageBubbleProps {
   message: Message;
@@ -63,12 +64,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   }).filter(Boolean);
 
   return (
-    <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-[fadeIn_0.3s_ease-out]`}>
+    <div className={`flex w-full mb-6 ${isUser ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+
+      {!isUser && (
+        <div className="w-8 h-8 rounded-full bg-indigo-600/20 flex items-center justify-center mr-3 mt-1 flex-shrink-0">
+          <Bot size={16} className="text-indigo-500" />
+        </div>
+      )}
+
       <div
         className={`relative max-w-[85%] md:max-w-[75%] p-4 rounded-2xl shadow-sm border
         ${isUser
-            ? 'bg-purple-100 dark:bg-[#1A1D2D] text-gray-800 dark:text-purple-100 border-purple-200 dark:border-purple-900/50 rounded-br-none'
-            : 'bg-white dark:bg-[#131625] text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-800 rounded-bl-none'
+            ? 'bg-gradient-to-br from-indigo-600 to-purple-700 text-white border-transparent rounded-br-sm'
+            : 'bg-white dark:bg-[#1E2335] text-gray-800 dark:text-gray-100 border-gray-100 dark:border-white/5 rounded-bl-sm'
           }
         `}
       >
@@ -126,8 +134,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
         {/* Grounding Sources */}
         {sources && sources.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-black/5 dark:border-white/5">
-            <p className="text-[10px] font-semibold opacity-60 mb-1.5 uppercase tracking-wide">Sources</p>
+          <div className={`mt-3 pt-3 border-t ${isUser ? 'border-white/20' : 'border-black/5 dark:border-white/5'}`}>
+            <p className={`text-[10px] font-semibold opacity-60 mb-1.5 uppercase tracking-wide ${isUser ? 'text-white/80' : ''}`}>Sources</p>
             <div className="flex flex-wrap gap-2">
               {sources.map((source: any) => (
                 <a
@@ -148,9 +156,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between mt-2 pt-1 border-t border-black/5 dark:border-white/5">
+      <div className={`flex items-center justify-between mt-2 pt-1 border-t ${isUser ? 'border-white/20' : 'border-black/5 dark:border-white/5'}`}>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] opacity-50 uppercase tracking-widest">
+          <span className={`text-[10px] opacity-50 uppercase tracking-widest ${isUser ? 'text-white/70' : ''}`}>
             {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
 

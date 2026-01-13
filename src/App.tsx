@@ -31,7 +31,6 @@ import {
   OrbCanvas,
   ErrorBoundary,
   KeyboardShortcuts,
-  SearchBar,
   SearchResults,
   Orb,
   SettingsModal,
@@ -349,6 +348,8 @@ const App: React.FC = () => {
         onImportClick={() => setIsImportOpen(true)}
         onShortcutsClick={() => setIsShortcutsOpen(true)}
         onSummarizeClick={() => setIsSummaryOpen(true)}
+        searchQuery={query}
+        onSearchChange={setQuery}
       />
 
       {!isOnline && (
@@ -357,14 +358,7 @@ const App: React.FC = () => {
         </div>
       )}
 
-      <div className="sticky top-[60px] z-20 px-4 py-2 bg-white/80 dark:bg-[#0B0D18]/80 backdrop-blur-md border-b border-white/10">
-        <SearchBar
-          query={query}
-          onQueryChange={setQuery}
-          onClear={clearSearch}
-          resultCount={results.length}
-        />
-      </div>
+
 
       <ImageDropZone
         isDragging={isDragging}
@@ -425,10 +419,13 @@ const App: React.FC = () => {
           </div>
 
           <div
-            className="sticky top-0 z-0 w-full flex justify-center h-0 pointer-events-none"
+            className={`transition-all duration-700 ease-in-out z-10 pointer-events-none fixed left-0 right-0 flex justify-center ${!hasMessages
+                ? 'top-[35%] transform scale-125'
+                : 'top-[85px] transform scale-75'
+              }`}
             aria-hidden="true"
           >
-            <div className={`absolute top-0 transform -translate-y-4 ${prefersReducedMotion ? 'motion-reduce' : ''}`}>
+            <div className={prefersReducedMotion ? 'motion-reduce' : ''}>
               <OrbErrorBoundary>
                 <Orb state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
               </OrbErrorBoundary>

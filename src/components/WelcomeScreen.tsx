@@ -7,33 +7,31 @@ interface WelcomeScreenProps {
 
 const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onSuggestionClick }) => {
     const suggestions = [
-        "What can you do?",
         "Tell me a joke",
-        "Write a short poem",
-        "Help me with React"
+        "Help me brainstorm",
+        "Explain a concept",
+        "Write some code"
     ];
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-8 animate-in fade-in duration-500">
-            <div className="space-y-4">
-                <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-500">
+        <div className="flex flex-col items-center justify-start min-h-full w-full pt-[45vh] animate-in fade-in duration-700">
+            <div className="space-y-3 mb-8 text-center px-4">
+                <h1 className="text-3xl font-semibold text-gray-900 dark:text-white tracking-tight">
                     Welcome to EchoBot
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400 max-w-md mx-auto">
-                    Your AI-powered voice assistant. I can help you with writing, coding, analysis, and more.
+                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto text-base">
+                    Your AI companion. How can I help you today?
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg px-6">
                 {suggestions.map((suggestion, index) => (
                     <button
                         key={index}
                         onClick={() => onSuggestionClick(suggestion)}
-                        className="p-4 rounded-xl bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:border-purple-500 dark:hover:border-purple-500 transition-all text-sm text-left hover:shadow-md group"
+                        className="px-4 py-3 rounded-xl bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 hover:border-purple-500/50 dark:hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/5 transition-all duration-200 text-sm text-center text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400"
                     >
-                        <span className="group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                            {suggestion}
-                        </span>
+                        {suggestion}
                     </button>
                 ))}
             </div>

@@ -68,7 +68,7 @@ export function InputBar({
         {/* Attachment Button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          className="p-3 text-gray-400 hover:text-purple-500 dark:hover:text-purple-400 transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5"
+          className="p-3 text-gray-500 hover:text-purple-600 dark:text-gray-400 dark:hover:text-purple-400 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-white/10"
           title="Attach images"
         >
           <Paperclip size={20} />
@@ -104,7 +104,7 @@ export function InputBar({
             onKeyDown={handleKeyDown}
             onPaste={onPaste}
             placeholder="Message EchoBot..."
-            className="w-full bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 text-base p-3 focus:outline-none resize-none max-h-[200px]"
+            className="w-full bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 text-base p-3 focus:outline-none resize-none max-h-[200px]"
             rows={1}
             style={{ minHeight: '44px' }}
           />
@@ -117,7 +117,7 @@ export function InputBar({
             onClick={onMicClick}
             className={`p-3 rounded-full transition-all duration-300 ${isMicActive
               ? 'bg-red-500/10 text-red-500 animate-pulse'
-              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5'
+              : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-white/10'
               }`}
             title={isMicActive ? 'Stop listening' : 'Start voice input'}
           >
