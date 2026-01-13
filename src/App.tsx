@@ -10,7 +10,8 @@ import {
   useChat,
   useScrollBehavior,
   useAudioAnalyzer,
-  useReducedMotion
+  useReducedMotion,
+  useOnlineStatus
 } from './hooks';
 import { announce, ARIA_LABELS, getOrbStatusDescription } from './utils/accessibility';
 import { logger } from './utils/logger';
@@ -238,7 +239,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         ) : (
           <button
             type="submit"
-            disabled={!inputValue.trim() && !selectedImage}
+            disabled={!isOnline || (!inputValue.trim() && !selectedImage)}
             className="p-2.5 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 disabled:bg-gray-400 dark:disabled:bg-gray-600 transition-all shadow-md hover:shadow-lg active:scale-95 flex-shrink-0"
             aria-label={ARIA_LABELS.SEND_MESSAGE}
           >
@@ -262,6 +263,8 @@ const App: React.FC = () => {
   const { containerRef, bottomRef, scrollProgress } = useScrollBehavior({
     scrollTriggers: [messages]
   });
+
+  const isOnline = useOnlineStatus();
 
   // --- Local State ---
   const [inputValue, setInputValue] = useState('');
@@ -441,6 +444,13 @@ const App: React.FC = () => {
         onOpenSettings={() => setIsSettingsOpen(true)}
         isDarkMode={isDarkMode}
       />
+
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="w-full bg-yellow-500/90 text-black text-center py-1 px-4 text-sm font-medium sticky top-[64px] z-10 backdrop-blur-sm animate-in slide-in-from-top-2">
+          You are currently offline. Messages will be sent when you reconnect.
+        </div>
+      )}
 
       {/* Main Chat Area */}
       <main

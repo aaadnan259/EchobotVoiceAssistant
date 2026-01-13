@@ -71,7 +71,10 @@
             "@types/react-window": "^1.8.8",
             "@types/ws": "^8.18.1",
             "@vitejs/plugin-react-swc": "^3.10.2",
-            "vite": "6.3.5"
+            "vite": "6.3.5",
+            "vite-plugin-pwa": "^1.2.0",
+            "workbox-precaching": "^7.4.0",
+            "workbox-routing": "^7.4.0"
       },
       "scripts": {
             "dev": "vite",
