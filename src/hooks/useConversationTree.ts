@@ -3,6 +3,7 @@ import { Message, Branch, Conversation } from '../types';
 import { STORAGE_KEYS, MESSAGE_LIMITS, CHAT_MESSAGES } from '../constants';
 import { sanitizeMessage, sanitizeImageDataUri, sanitizeForStorage } from '../utils/sanitize';
 import { logger } from '../utils/logger';
+import { generateJSON, generateMarkdown, generateHTML, validateImport, ExportFormat, ExportOptions } from '../utils/exportImport';
 
 const { MESSAGES: STORAGE_KEY } = STORAGE_KEYS;
 const { MAX_STORED_MESSAGES, MAX_MESSAGE_LENGTH, TRUNCATION_SUFFIX } = MESSAGE_LIMITS;
@@ -424,6 +425,86 @@ export function useConversationTree() {
     // Adapter for compatibility with useMessages interface where possible
     const messages = currentMessages;
 
+    // --- Export / Import ---
+    const exportData = useCallback(async (format: ExportFormat, options: ExportOptions = { includeImages: true }) => {
+        let content = '';
+
+        if (format === 'json') {
+            // JSON exports the FULL tree (backup)
+            content = generateJSON(conversation, options);
+            const blob = new Blob([content], { type: 'application/json' });
+            return blob;
+        } else {
+            // Markdown/HTML exports the CURRENT VIEW (linear)
+            const msgs = currentMessages;
+            if (format === 'markdown') {
+                content = generateMarkdown(msgs, options);
+                const blob = new Blob([content], { type: 'text/markdown' });
+                return blob;
+            } else if (format === 'html') {
+                content = generateHTML(msgs, options);
+                const blob = new Blob([content], { type: 'text/html' });
+                return blob;
+            }
+        }
+        return new Blob([''], { type: 'text/plain' });
+    }, [conversation, currentMessages]);
+
+    const importData = useCallback(async (jsonString: string): Promise<boolean> => {
+        try {
+            const parsed = JSON.parse(jsonString);
+            if (validateImport(parsed)) {
+                // If legacy array, convert (logic reused from loadConversation or just set and let it migrate on next load? 
+                // Better to migrate immediately).
+                if (Array.isArray(parsed)) {
+                    // Manual migration here or rely on loadConversation structure?
+                    // Let's reuse the migration logic from loadConversation by creating a temporary function or just duplicating simplified version.
+                    // Simpler: Just set it. The hook state setter doesn't automatically migrate array->tree unless we explicitly do it.
+
+                    // Let's do a robust migration:
+                    const messagesMap: Record<string, Message> = {};
+                    let prevId: string | null = null;
+                    const MAIN_BRANCH_ID = 'main';
+
+                    parsed.forEach((msg: any) => {
+                        if (msg && msg.id) {
+                            messagesMap[msg.id] = {
+                                ...msg,
+                                parentId: prevId,
+                                branchId: MAIN_BRANCH_ID
+                            } as Message;
+                            prevId = msg.id;
+                        }
+                    });
+
+                    const newConv: Conversation = {
+                        id: 'imported',
+                        branches: {
+                            [MAIN_BRANCH_ID]: {
+                                id: MAIN_BRANCH_ID,
+                                name: 'Imported Conversation',
+                                createdAt: Date.now(),
+                                parentMessageId: null
+                            }
+                        },
+                        activeBranchId: MAIN_BRANCH_ID,
+                        messages: messagesMap
+                    };
+                    setConversation(newConv);
+                    return true;
+                }
+
+                // V2 Tree import
+                setConversation(parsed as Conversation);
+                return true;
+            }
+            return false;
+        } catch (e) {
+            logger.error('Import failed', e);
+            return false;
+        }
+    }, []);
+
     return {
         messages, // The array of messages for current view
         conversation, // The full tree state
@@ -439,6 +520,8 @@ export function useConversationTree() {
         createBranch,
         switchBranch,
         navigateUncles,
-        getSiblingInfo
+        getSiblingInfo,
+        exportData,
+        importData
     };
 }

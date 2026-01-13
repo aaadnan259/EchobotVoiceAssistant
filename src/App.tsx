@@ -17,6 +17,7 @@ import {
 } from './hooks';
 import { announce, ARIA_LABELS, getOrbStatusDescription } from './utils/accessibility';
 import { logger } from './utils/logger';
+import { ExportFormat } from './utils/exportImport';
 
 import { toast, Toaster } from 'sonner';
 import {
@@ -25,12 +26,14 @@ import {
   InputArea,
   SmartMessageList,
   OrbCanvas,
-  ErrorBoundary, // Assuming this is a generic ErrorBoundary, not the specific ones
+  ErrorBoundary,
   KeyboardShortcuts,
   SearchBar,
   SearchResults,
-  Orb, // Orb is still needed
-  SettingsModal // SettingsModal is still needed
+  Orb,
+  SettingsModal,
+  ExportModal,
+  ImportModal
 } from './components';
 import {
   AppErrorBoundary,
@@ -43,17 +46,6 @@ const { SUCCESS, ERRORS, CONFIRMATIONS } = CHAT_MESSAGES;
 
 /** Threshold for switching to virtualized rendering */
 const VIRTUALIZATION_THRESHOLD = 50;
-
-// =============================================================================
-// Sub-Components (could be moved to separate files)
-// =============================================================================
-
-// HeaderProps and Header component are removed as per the diff, replaced by TopBar
-// ChatInputProps and ChatInput component are removed as per the diff, replaced by InputArea
-
-// =============================================================================
-// Main App Component
-// =============================================================================
 
 const App: React.FC = () => {
   // --- Custom Hooks ---
@@ -68,7 +60,10 @@ const App: React.FC = () => {
     // Branching
     createBranch,
     navigateUncles,
-    getSiblingInfo
+    getSiblingInfo,
+    // Export/Import
+    exportData,
+    importData
   } = useConversationTree();
   const { settings, setSettings, toggleTheme, isDarkMode } = useSettings();
 
@@ -91,11 +86,14 @@ const App: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
   const fileInputRef = useRef<HTMLInputElement>(null!);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null); // New ref for auto-scrolling
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const hasMessages = messages.length > 0; // New state for WelcomeScreen
+  const hasMessages = messages.length > 0;
 
   // --- Chat Hook ---
   const { isGenerating, orbState, setOrbState, sendMessage, stopGeneration } = useChat({
@@ -136,7 +134,6 @@ const App: React.FC = () => {
         return;
       }
 
-      // Handle status updates
       if (data.status) {
         const statusMap: Record<string, OrbState> = {
           'listening': OrbState.LISTENING,
@@ -150,7 +147,6 @@ const App: React.FC = () => {
         return;
       }
 
-      // Handle incoming text/audio from backend
       if (data.text) {
         addMessage({ role: 'model', text: data.text });
         playSound('receive');
@@ -159,7 +155,6 @@ const App: React.FC = () => {
       if (data.audio) {
         setOrbState(OrbState.RESPONDING);
         if (audioRef.current) audioRef.current.pause();
-        // audio playback
         const audioSrc = 'data:audio/mpeg;base64,' + data.audio;
         const audio = new Audio(audioSrc);
         audioRef.current = audio;
@@ -207,6 +202,10 @@ const App: React.FC = () => {
   }, [clearMessages, setOrbState]);
 
   const handleSaveChat = useCallback(() => {
+    // Legacy support, kept but now also mapped to export modal if desired
+    // For now we keep it as a "Quick Save" or we can remove it.
+    // The prompt implied replace/update. TopBar update removed the old onSaveChat call?
+    // Let's check TopBar props. It asked for onExportClick.
     if (exportMessages()) {
       toast.success(SUCCESS.CHAT_SAVED);
     } else {
@@ -231,7 +230,31 @@ const App: React.FC = () => {
     setInputValue(suggestion);
   }, []);
 
-  // --- Accessibility: Announce orb state changes ---
+  // --- Export / Import Handlers ---
+  const handleExport = useCallback(async (format: ExportFormat, options: { includeImages: boolean }) => {
+    try {
+      const blob = await exportData(format, options);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      a.download = `echobot-export-${timestamp}.${format === 'markdown' ? 'md' : format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(`Exported as ${format.toUpperCase()}`);
+    } catch (error) {
+      console.error(error);
+      toast.error('Export failed');
+    }
+  }, [exportData]);
+
+  const handleImport = useCallback(async (content: string) => {
+    return await importData(content);
+  }, [importData]);
+
+  // --- Accessibility ---
   useEffect(() => {
     const stateDescriptions: Record<OrbState, string> = {
       [OrbState.IDLE]: '',
@@ -247,15 +270,12 @@ const App: React.FC = () => {
     }
   }, [orbState]);
 
-  // --- Reduced motion preference ---
   const prefersReducedMotion = useReducedMotion();
 
-  // --- Render ---
   return (
     <div className="relative flex flex-col h-screen bg-gray-50 dark:bg-[#0B0D18] transition-colors duration-300 text-gray-900 dark:text-white overflow-hidden">
       <Toaster position="top-center" />
 
-      {/* Skip to main content link for keyboard users */}
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-purple-600 focus:text-white focus:rounded-lg"
@@ -263,7 +283,6 @@ const App: React.FC = () => {
         Skip to chat
       </a>
 
-      {/* ARIA live region for announcements */}
       <div
         id="aria-live-region"
         aria-live="polite"
@@ -271,28 +290,34 @@ const App: React.FC = () => {
         className="sr-only"
       />
 
-      {/* Background */}
       <div className="absolute inset-0 pointer-events-none opacity-0 dark:opacity-100 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#1e1b4b] via-[#0B0D18] to-[#000000]" aria-hidden="true" />
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-[0.05] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" aria-hidden="true" />
 
-      {/* Header (now TopBar) */}
+      {/* TopBar with new actions */}
       <TopBar
         isDarkMode={isDarkMode}
         toggleTheme={toggleTheme}
         onReset={handleReset}
-        onSaveChat={handleSaveChat}
+        onSaveChat={handleSaveChat} // Kept for compatibility if needed, or remove if TopBar doesn't use it anymore
         onClearChat={handleClearChat}
         onOpenSettings={() => setIsSettingsOpen(true)}
+
+        // New props
+        isMicActive={orbState === OrbState.LISTENING}
+        onMicToggle={handleMicClick}
+        isVoiceEnabled={!!settings.voiceURI} // Simplistic check
+        onVoiceToggle={() => {/* toggle voice logic if needed */ }}
+
+        onExportClick={() => setIsExportOpen(true)}
+        onImportClick={() => setIsImportOpen(true)}
       />
 
-      {/* Offline Banner */}
       {!isOnline && (
         <div className="w-full bg-yellow-500/90 text-black text-center py-1 px-4 text-sm font-medium sticky top-[64px] z-10 backdrop-blur-sm animate-in slide-in-from-top-2">
           You are currently offline. Messages will be sent when you reconnect.
         </div>
       )}
 
-      {/* Search Bar Integration */}
       <div className="sticky top-[60px] z-20 px-4 py-2 bg-white/80 dark:bg-[#0B0D18]/80 backdrop-blur-md border-b border-white/10">
         <SearchBar
           query={query}
@@ -302,7 +327,6 @@ const App: React.FC = () => {
         />
       </div>
 
-      {/* Main Chat Area */}
       <main
         ref={containerRef}
         id="main-content"
@@ -314,10 +338,7 @@ const App: React.FC = () => {
           <SearchResults
             results={results}
             onResultClick={(id) => {
-              // Scroll to message logic could go here if virtualization exposes scrollToItem
-              // For now, we just clear search to show the message in context
               clearSearch();
-              // A timeout to let the list render before scrolling could work
               setTimeout(() => {
                 const el = document.getElementById('message-' + id);
                 el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -336,7 +357,6 @@ const App: React.FC = () => {
                 onSpeak={handleSpeak}
                 onReaction={addReaction}
 
-                // Branching props
                 getSiblingInfo={getSiblingInfo}
                 onNavigateBranch={navigateUncles}
                 onBranchCreate={createBranch}
@@ -349,12 +369,10 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Orb status for screen readers */}
         <div className="sr-only" role="status" aria-live="polite">
           {getOrbStatusDescription(orbState)}
         </div>
 
-        {/* Orb */}
         <div
           className="sticky top-0 z-0 w-full flex justify-center h-0 pointer-events-none"
           aria-hidden="true"
@@ -367,7 +385,6 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Input (now InputArea) */}
       <InputArea
         inputValue={inputValue}
         onInputChange={setInputValue}
@@ -382,7 +399,6 @@ const App: React.FC = () => {
         fileInputRef={fileInputRef}
       />
 
-      {/* Settings Modal */}
       <SettingsErrorBoundary onClose={() => setIsSettingsOpen(false)}>
         <SettingsModal
           isOpen={isSettingsOpen}
@@ -391,11 +407,23 @@ const App: React.FC = () => {
           onSave={setSettings}
         />
       </SettingsErrorBoundary>
+
+      <ExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        onExport={handleExport}
+      />
+
+      <ImportModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        onImport={handleImport}
+      />
+
     </div>
   );
 };
 
-// Wrap the entire app with AppErrorBoundary
 const AppWithErrorBoundary: React.FC = () => (
   <AppErrorBoundary>
     <App />

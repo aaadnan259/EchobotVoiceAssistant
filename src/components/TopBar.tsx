@@ -1,4 +1,4 @@
-import { Mic, MicOff, Sun, Moon, Volume2, VolumeX } from 'lucide-react';
+import { Mic, MicOff, Sun, Moon, Volume2, VolumeX, Download, Upload } from 'lucide-react';
 import echobotLogo from '../assets/echobot-logo-transparent.png';
 
 interface TopBarProps {
@@ -8,9 +8,20 @@ interface TopBarProps {
   onThemeToggle: () => void;
   isVoiceEnabled: boolean;
   onVoiceToggle: () => void;
+  onExportClick: () => void;
+  onImportClick: () => void;
 }
 
-export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle, isVoiceEnabled, onVoiceToggle }: TopBarProps) {
+export function TopBar({
+  isMicActive,
+  onMicToggle,
+  theme,
+  onThemeToggle,
+  isVoiceEnabled,
+  onVoiceToggle,
+  onExportClick,
+  onImportClick
+}: TopBarProps) {
   const handleLogoClick = () => {
     window.location.reload();
   };
@@ -39,6 +50,24 @@ export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle, isVoice
         {/* Right: Action Icons */}
         <div className="flex items-center gap-4">
           <button
+            onClick={onImportClick}
+            className="w-10 h-10 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center transition-all duration-300 hover:scale-110"
+            aria-label="Import conversation"
+            title="Import"
+          >
+            <Upload className="w-5 h-5 text-muted-foreground dark:text-white/70" />
+          </button>
+
+          <button
+            onClick={onExportClick}
+            className="w-10 h-10 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center transition-all duration-300 hover:scale-110"
+            aria-label="Export conversation"
+            title="Export"
+          >
+            <Download className="w-5 h-5 text-muted-foreground dark:text-white/70" />
+          </button>
+
+          <button
             onClick={onThemeToggle}
             className="w-10 h-10 rounded-full bg-secondary hover:bg-secondary/80 dark:bg-white/5 dark:hover:bg-white/10 flex items-center justify-center transition-all duration-300 hover:scale-110"
             aria-label="Toggle theme"
@@ -53,8 +82,8 @@ export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle, isVoice
           <button
             onClick={onVoiceToggle}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 ${isVoiceEnabled
-              ? 'bg-secondary hover:bg-secondary/80 dark:bg-white/5 dark:hover:bg-white/10'
-              : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
+                ? 'bg-secondary hover:bg-secondary/80 dark:bg-white/5 dark:hover:bg-white/10'
+                : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
               }`}
             aria-label="Toggle voice output"
           >
@@ -68,8 +97,8 @@ export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle, isVoice
           <button
             onClick={onMicToggle}
             className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 ${isMicActive
-              ? 'bg-indigo-500 shadow-lg shadow-indigo-500/40'
-              : 'bg-secondary hover:bg-secondary/80 dark:bg-white/5 dark:hover:bg-white/10'
+                ? 'bg-indigo-500 shadow-lg shadow-indigo-500/40'
+                : 'bg-secondary hover:bg-secondary/80 dark:bg-white/5 dark:hover:bg-white/10'
               }`}
             aria-label="Toggle microphone"
           >
@@ -79,8 +108,6 @@ export function TopBar({ isMicActive, onMicToggle, theme, onThemeToggle, isVoice
               <MicOff className="w-5 h-5 text-muted-foreground dark:text-white/70" />
             )}
           </button>
-
-
         </div>
       </div>
     </div>
