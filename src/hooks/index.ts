@@ -11,6 +11,7 @@ export { useReducedMotion } from './useReducedMotion';
 export { useFocusTrap } from './useFocusTrap';
 export { useVirtualization } from './useVirtualization';
 export { useKeyboardShortcuts } from './useKeyboardShortcuts';
+export { useTheme } from './useTheme';
 export { useOnlineStatus } from './useOnlineStatus';
 export { useMessageSearch } from './useMessageSearch';
 export { useConversationTree } from './useConversationTree';

@@ -16,19 +16,41 @@
 }
 
 @layer base {
+  :root {
+    --theme-primary: #7c3aed;
+    --theme-bg: #f9fafb;
+    --theme-surface: #ffffff;
+    --theme-text: #111827;
+    /* ... define defaults matching 'light' theme to avoid FOUC ... */
+  }
+
   body {
     @apply overflow-hidden;
     min-height: 100vh;
+    background-color: var(--theme-bg);
+    color: var(--theme-text);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
 @layer utilities {
   .glass-panel {
-    @apply backdrop-blur-xl bg-white/5 border border-white/10 shadow-xl;
+    @apply backdrop-blur-xl shadow-xl;
+    background-color: var(--theme-surface);
+    /* Fallback or mixed with opacity? */
+    background: color-mix(in srgb, var(--theme-surface), transparent 20%);
+    border: 1px solid var(--theme-border);
   }
 
   .glass-input {
-    @apply backdrop-blur-md bg-white/5 border border-white/10 focus:bg-white/10 transition-all duration-300;
+    @apply backdrop-blur-md transition-all duration-300;
+    background: color-mix(in srgb, var(--theme-surface), transparent 50%);
+    border: 1px solid var(--theme-border);
+    color: var(--theme-text);
+  }
+
+  .glass-input:focus {
+    border-color: var(--theme-primary);
   }
 
   /* Starfield Noise Effect */

@@ -42,11 +42,32 @@ export interface Conversation {
   messages: Record<string, Message>;
 }
 
+export interface Theme {
+  id: string;
+  name: string;
+  type: 'light' | 'dark';
+  colors: {
+    primary: string;
+    secondary: string;
+    background: string;
+    surface: string;
+    text: string;
+    textMuted: string;
+    border: string;
+    error: string;
+    success: string;
+  };
+  orb: {
+    gradient: string[];
+    glowColor: string;
+  };
+}
+
 export interface AppSettings {
   model: string;
   systemPrompt: string;
   voiceURI: string | null;
-  theme: 'light' | 'dark';
+  theme: string; // Theme ID
 }
 
 export interface VoiceOption {

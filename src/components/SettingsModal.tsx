@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { ThemePicker } from './ThemePicker';
 import { AppSettings, VoiceOption } from '../types';
 
 interface SettingsModalProps {
@@ -36,7 +37,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s]">
       <div className="bg-white dark:bg-[#131625] w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]">
-        
+
         {/* Header */}
         <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Settings</h2>
@@ -47,7 +48,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
 
         {/* Content */}
         <div className="p-6 overflow-y-auto space-y-6">
-          
+
           {/* Model Display (Read Only) */}
           <div>
             <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Model</label>
@@ -59,20 +60,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
           {/* System Prompt */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">System Prompt</label>
-            <textarea 
+            <textarea
               value={localSettings.systemPrompt}
-              onChange={(e) => setLocalSettings({...localSettings, systemPrompt: e.target.value})}
+              onChange={(e) => setLocalSettings({ ...localSettings, systemPrompt: e.target.value })}
               className="w-full h-32 p-3 bg-gray-50 dark:bg-[#0B0D18] border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500 focus:outline-none resize-none"
               placeholder="How should EchoBot behave?"
             />
           </div>
 
+          {/* Theme */}
+          <section>
+            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-4">Appearance</h3>
+            <ThemePicker
+              currentThemeId={localSettings.theme}
+              onSelect={(id) => setLocalSettings(prev => ({ ...prev, theme: id }))}
+            />
+          </section>
+
           {/* Voice Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">TTS Voice</label>
-            <select 
+            <select
               value={localSettings.voiceURI || ''}
-              onChange={(e) => setLocalSettings({...localSettings, voiceURI: e.target.value})}
+              onChange={(e) => setLocalSettings({ ...localSettings, voiceURI: e.target.value })}
               className="w-full p-2 bg-gray-50 dark:bg-[#0B0D18] border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-purple-500 focus:outline-none"
             >
               <option value="">Default System Voice</option>
@@ -86,13 +96,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, settings
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex justify-end gap-3">
-          <button 
+          <button
             onClick={onClose}
             className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={() => {
               onSave(localSettings);
               onClose();

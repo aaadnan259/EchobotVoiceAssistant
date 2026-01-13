@@ -70,6 +70,9 @@ const App: React.FC = () => {
   } = useConversationTree();
   const { settings, setSettings, toggleTheme, isDarkMode } = useSettings();
 
+  // Apply Theme
+  useTheme();
+
   const { containerRef, bottomRef, scrollProgress } = useScrollBehavior({
     scrollTriggers: [messages]
   });
