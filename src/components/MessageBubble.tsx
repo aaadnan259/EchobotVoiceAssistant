@@ -4,10 +4,12 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { Message } from '../types';
 import { SafeImage, SafeLink } from './SafeContent';
+import { MessageReactions } from './MessageReactions';
 
 interface MessageBubbleProps {
   message: Message;
   onSpeak: (text: string) => void;
+  onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
 }
 
 const CopyButton = ({ text }: { text: string }) => {
@@ -34,7 +36,7 @@ const CopyButton = ({ text }: { text: string }) => {
   );
 };
 
-const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onSpeak }) => {
+const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onSpeak, onReaction }) => {
   const isUser = message.role === 'user';
 
   // Extract sources if available
@@ -142,6 +144,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, onSpeak }) => {
             </button>
           )}
         </div>
+
+        {/* Reactions */}
+        {onReaction && (
+          <MessageReactions message={message} onReaction={onReaction} />
+        )}
       </div>
     </div>
   );

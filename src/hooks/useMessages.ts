@@ -207,6 +207,30 @@ export function useMessages() {
         return message ? sanitizeMessage(message.text) : '';
     }, [messages]);
 
+
+    // Add or remove a reaction
+    const addReaction = useCallback((id: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => {
+        setMessages(prev => prev.map(msg => {
+            if (msg.id !== id) return msg;
+
+            const currentReactions = msg.reactions || {};
+            let newReactions = { ...currentReactions };
+
+            // Thumbs logic (mutual exclusion)
+            if (reaction === 'thumbsUp') {
+                newReactions.thumbsUp = !newReactions.thumbsUp;
+                if (newReactions.thumbsUp) newReactions.thumbsDown = false;
+            } else if (reaction === 'thumbsDown') {
+                newReactions.thumbsDown = !newReactions.thumbsDown;
+                if (newReactions.thumbsDown) newReactions.thumbsUp = false;
+            } else if (reaction === 'starred') {
+                newReactions.starred = !newReactions.starred;
+            }
+
+            return { ...msg, reactions: newReactions };
+        }));
+    }, []);
+
     return {
         messages,
         addMessage,
@@ -216,6 +240,7 @@ export function useMessages() {
         clearMessages,
         exportMessages,
         getSanitizedText,
-        setMessages
+        setMessages,
+        addReaction
     };
 }

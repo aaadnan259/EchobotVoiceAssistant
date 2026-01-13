@@ -18,6 +18,12 @@ export interface Message {
       web?: { uri: string; title: string };
     }>;
   };
+  reactions?: {
+    thumbsUp?: boolean;
+    thumbsDown?: boolean;
+    starred?: boolean;
+  };
+  feedback?: string;
 }
 
 export interface AppSettings {

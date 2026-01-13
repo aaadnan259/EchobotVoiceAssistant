@@ -17,6 +17,7 @@ import { MessageErrorBoundary } from './ErrorBoundaries';
 interface VirtualizedMessageListProps {
     messages: Message[];
     onSpeak: (text: string) => void;
+    onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
     /** Estimated height of each message row (will be measured dynamically) */
     estimatedItemSize?: number;
     /** Whether to auto-scroll to bottom when new messages arrive */
@@ -43,6 +44,7 @@ const MessageRow = memo(({
 }: {
     message: Message;
     onSpeak: (text: string) => void;
+    onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
     setHeight: (id: string, height: number) => void;
     style: React.CSSProperties;
 }) => {
@@ -61,7 +63,7 @@ const MessageRow = memo(({
         <div style={style}>
             <div ref={rowRef} className="py-1">
                 <MessageErrorBoundary>
-                    <MessageBubble message={message} onSpeak={onSpeak} />
+                    <MessageBubble message={message} onSpeak={onSpeak} onReaction={onReaction} />
                 </MessageErrorBoundary>
             </div>
         </div>
@@ -82,6 +84,7 @@ MessageRow.displayName = 'MessageRow';
 export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     messages,
     onSpeak,
+    onReaction,
     estimatedItemSize = DEFAULT_ITEM_HEIGHT,
     autoScrollToBottom = true,
 }) => {
@@ -149,6 +152,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
                 key={message.id}
                 message={message}
                 onSpeak={onSpeak}
+                onReaction={onReaction}
                 setHeight={setItemHeight}
                 style={style}
             />
@@ -198,11 +202,12 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 export const SimpleMessageList: React.FC<{
     messages: Message[];
     onSpeak: (text: string) => void;
-}> = memo(({ messages, onSpeak }) => (
+    onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
+}> = memo(({ messages, onSpeak, onReaction }) => (
     <>
         {messages.map(msg => (
             <MessageErrorBoundary key={msg.id}>
-                <MessageBubble message={msg} onSpeak={onSpeak} />
+                <MessageBubble message={msg} onSpeak={onSpeak} onReaction={onReaction} />
             </MessageErrorBoundary>
         ))}
     </>
@@ -220,12 +225,13 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
 }> = ({
     messages,
     onSpeak,
+    onReaction,
     virtualizationThreshold = 50,
     ...props
 }) => {
         // Use simple list for small message counts
         if (messages.length < virtualizationThreshold) {
-            return <SimpleMessageList messages={messages} onSpeak={onSpeak} />;
+            return <SimpleMessageList messages={messages} onSpeak={onSpeak} onReaction={onReaction} />;
         }
 
         // Use virtualized list for large message counts
@@ -233,6 +239,7 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
             <VirtualizedMessageList
                 messages={messages}
                 onSpeak={onSpeak}
+                onReaction={onReaction}
                 {...props}
             />
         );

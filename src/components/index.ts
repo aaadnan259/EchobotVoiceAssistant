@@ -24,3 +24,4 @@ export { default as Orb } from './Orb';
 export { default as SettingsModal } from './SettingsModal';
 export { SearchBar } from './SearchBar';
 export { SearchResults } from './SearchResults';
+export { MessageReactions } from './MessageReactions';

@@ -56,7 +56,7 @@ const VIRTUALIZATION_THRESHOLD = 50;
 
 const App: React.FC = () => {
   // --- Custom Hooks ---
-  const { messages, addMessage, addPlaceholder, updateMessage, clearMessages, exportMessages } = useMessages();
+  const { messages, addMessage, addPlaceholder, updateMessage, clearMessages, exportMessages, addReaction } = useMessages();
   const { settings, setSettings, toggleTheme, isDarkMode } = useSettings();
 
   const { containerRef, bottomRef, scrollProgress } = useScrollBehavior({
@@ -318,9 +318,10 @@ const App: React.FC = () => {
               <SmartMessageList
                 messages={messages}
                 isThinking={orbState === OrbState.THINKING || orbState === OrbState.RESPONDING}
-                onSpeak={handleSpeak} // Keep onSpeak for SmartMessageList
-                virtualizationThreshold={VIRTUALIZATION_THRESHOLD} // Keep virtualizationThreshold
-                autoScrollToBottom={true} // Keep autoScrollToBottom
+                onSpeak={handleSpeak}
+                onReaction={addReaction}
+                virtualizationThreshold={VIRTUALIZATION_THRESHOLD}
+                autoScrollToBottom={true}
               />
             )}
             <div ref={messagesEndRef} className="h-4" />
