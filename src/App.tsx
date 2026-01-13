@@ -15,6 +15,7 @@ import {
   useOnlineStatus,
   useMessageSearch,
   useKeyboardShortcuts,
+  useTheme,
   useImageInput // New hook
 } from './hooks';
 import { announce, ARIA_LABELS, getOrbStatusDescription } from './utils/accessibility';
