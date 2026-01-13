@@ -4,7 +4,7 @@ import { logger } from '../utils/logger';
 interface ErrorBoundaryProps {
     children: ReactNode;
     /** Custom fallback UI to show when an error occurs */
-    fallback?: ReactNode;
+    fallback?: ReactNode | ((error: Error, reset: () => void) => ReactNode);
     /** Called when an error is caught */
     onError?: (error: Error, errorInfo: ErrorInfo) => void;
     /** Whether to show a retry button (default: true) */
@@ -67,6 +67,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         if (this.state.hasError) {
             // Custom fallback UI
             if (this.props.fallback) {
+                if (typeof this.props.fallback === 'function') {
+                    return (this.props.fallback as any)(this.state.error!, this.handleRetry);
+                }
                 return this.props.fallback;
             }
 

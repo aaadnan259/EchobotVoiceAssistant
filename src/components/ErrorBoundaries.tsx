@@ -8,12 +8,8 @@ import { STORAGE_KEYS } from '../constants';
  * Shows a full-page error UI with reload option.
  */
 export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const handleReload = () => {
-        window.location.reload();
-    };
-
-    const fallback = (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0B0D18] p-6">
+    const fallback = (error: Error, reset: () => void) => (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-[#0B0D18] p-6 text-center">
             <div className="text-purple-500 mb-6">
                 <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -33,13 +29,23 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }
                 Oops! EchoBot hit a snag
             </h1>
 
-            <p className="text-gray-600 dark:text-gray-400 text-center mb-6 max-w-md">
-                Something unexpected happened. Your chat history is safely stored and will be restored when you reload.
+            <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md">
+                We encountered an unexpected issue.
             </p>
 
-            <div className="flex gap-3">
+            {/* Error Details Box */}
+            <div className="w-full max-w-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-lg p-4 mb-6 text-left">
+                <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider mb-2">
+                    Error Details
+                </p>
+                <code className="block text-sm text-red-700 dark:text-red-300 font-mono break-all whitespace-pre-wrap">
+                    {error.message || 'Unknown error occurred'}
+                </code>
+            </div>
+
+            <div className="flex flex-wrap gap-3 justify-center">
                 <button
-                    onClick={handleReload}
+                    onClick={() => window.location.reload()}
                     className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-medium transition-colors shadow-lg shadow-purple-500/25"
                 >
                     Reload App
@@ -48,11 +54,11 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }
                 <button
                     onClick={() => {
                         localStorage.removeItem(STORAGE_KEYS.MESSAGES);
-                        handleReload();
+                        window.location.reload();
                     }}
                     className="px-6 py-3 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-full font-medium transition-colors"
                 >
-                    Clear & Reload
+                    Clear History & Reload
                 </button>
             </div>
         </div>
@@ -62,14 +68,8 @@ export const AppErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }
         <ErrorBoundary
             fallback={fallback}
             onError={(error, errorInfo) => {
-                // Log errors (logger handles environment-appropriate output)
                 logger.error('App Error:', error);
                 logger.error('Stack:', errorInfo.componentStack);
-
-                // Here you could send to an error tracking service
-                // if (typeof window !== 'undefined' && window.Sentry) {
-                //   window.Sentry.captureException(error, { extra: errorInfo });
-                // }
             }}
         >
             {children}
