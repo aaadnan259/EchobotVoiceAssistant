@@ -13,7 +13,8 @@ import {
   useAudioAnalyzer,
   useReducedMotion,
   useOnlineStatus,
-  useMessageSearch
+  useMessageSearch,
+  useKeyboardShortcuts
 } from './hooks';
 import { announce, ARIA_LABELS, getOrbStatusDescription } from './utils/accessibility';
 import { logger } from './utils/logger';
@@ -28,12 +29,14 @@ import {
   OrbCanvas,
   ErrorBoundary,
   KeyboardShortcuts,
+  Search, // Assuming Search icon was used? No, SearchBar component.
   SearchBar,
   SearchResults,
   Orb,
   SettingsModal,
   ExportModal,
-  ImportModal
+  ImportModal,
+  ShortcutsModal
 } from './components';
 import {
   AppErrorBoundary,
@@ -254,6 +257,31 @@ const App: React.FC = () => {
     return await importData(content);
   }, [importData]);
 
+  // --- Keyboard Shortcuts ---
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+
+  useKeyboardShortcuts({
+    'mod+enter': handleSend,
+    'mod+k': handleClearChat,
+    'mod+/': () => setIsShortcutsOpen(prev => !prev),
+    'mod+,': () => setIsSettingsOpen(true),
+    'mod+f': () => {
+      // Simple focus for now, ideally toggle search bar focus
+      const searchInput = document.querySelector('input[placeholder="Search messages..."]') as HTMLInputElement;
+      searchInput?.focus();
+    },
+    'escape': () => {
+      setIsSettingsOpen(false);
+      setIsExportOpen(false);
+      setIsImportOpen(false);
+      setIsShortcutsOpen(false);
+      clearSearch();
+    },
+    'mod+shift+v': handleMicClick,
+    'mod+e': () => setIsExportOpen(true),
+    'mod+i': () => setIsImportOpen(true),
+    'mod+j': toggleTheme
+  });
   // --- Accessibility ---
   useEffect(() => {
     const stateDescriptions: Record<OrbState, string> = {
@@ -310,6 +338,7 @@ const App: React.FC = () => {
 
         onExportClick={() => setIsExportOpen(true)}
         onImportClick={() => setIsImportOpen(true)}
+        onShortcutsClick={() => setIsShortcutsOpen(true)}
       />
 
       {!isOnline && (
@@ -418,6 +447,11 @@ const App: React.FC = () => {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         onImport={handleImport}
+      />
+
+      <ShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
 
     </div>
