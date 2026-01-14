@@ -14,7 +14,8 @@ class LLMService:
     def __init__(self):
         self.provider = ConfigLoader.get("ai.provider", "openai")
         self.api_key = None
-        self.model_name = ConfigLoader.get("ai.llm_model", "gemini-2.0-flash")
+        # FORCE gemini-2.0-flash - ignore config to fix deployment issue
+        self.model_name = "gemini-2.0-flash"
         self.client = None
         
         if self.provider == "google":
