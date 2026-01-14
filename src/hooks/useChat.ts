@@ -76,17 +76,15 @@ export function useChat({
             for await (const chunk of stream) {
                 if (stopGenerationRef.current) break;
 
-                const chunkText = chunk.text || '';
+                // chunk is a string from streamGeminiResponse, not an object
+                const chunkText = typeof chunk === 'string' ? chunk : (chunk?.text || '');
                 fullText += chunkText;
 
-                // Extract grounding metadata if present
-                if (chunk.candidates?.[0]?.groundingMetadata) {
-                    groundingMetadata = chunk.candidates[0].groundingMetadata;
-                }
+                // Note: grounding metadata would come from the backend if needed
+                // For now, the backend returns plain text chunks
 
                 updateMessage(botMsgId, {
-                    text: fullText,
-                    groundingMetadata: groundingMetadata
+                    text: fullText
                 });
             }
 
