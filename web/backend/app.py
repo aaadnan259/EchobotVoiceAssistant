@@ -49,6 +49,9 @@ async def gemini_chat(request: ChatRequest):
     # NEW SDK INITIALIZATION
     client = genai.Client(api_key=api_key)
     
+    # FORCE MODEL
+    target_model = "gemini-2.0-flash"
+    
     # Prepare history
     # New SDK expects: contents=[{'role': '...', 'parts': [{'text': '...'}]}]
     gemini_contents = []
@@ -81,7 +84,7 @@ async def gemini_chat(request: ChatRequest):
         try:
             # NEW SDK STREAMING
             response = client.models.generate_content_stream(
-                model=request.modelName,
+                model=target_model,
                 contents=gemini_contents,
                 config={'system_instruction': request.systemInstruction}
             )
@@ -109,8 +112,11 @@ async def gemini_chat_simple(request: ChatRequest):
          
     client = genai.Client(api_key=api_key)
     
+    # FORCE MODEL
+    target_model = "gemini-2.0-flash"
+
     response = client.models.generate_content(
-        model=request.modelName,
+        model=target_model,
         contents=[request.newMessage], # simplified
         config={'system_instruction': request.systemInstruction}
     )
