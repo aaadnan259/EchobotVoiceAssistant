@@ -6,6 +6,11 @@ from utils.logger import logger
 class TTSEngine:
     def __init__(self):
         self.api_key = ConfigLoader.get("voice.elevenlabs_api_key")
+        
+        # Sanitize API Key (Remove whitespace, quotes, etc matching common copy-paste errors)
+        if self.api_key:
+            self.api_key = self.api_key.strip().strip('"').strip("'")
+            
         if not self.api_key:
             logger.warning("ElevenLabs API key not found. TTS will be disabled.")
             self.client = None
