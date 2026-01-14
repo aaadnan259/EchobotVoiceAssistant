@@ -367,7 +367,7 @@ const App: React.FC = () => {
           setIsDragging(true);
         }}
         onDragLeave={() => setIsDragging(false)}
-        className="flex-1 overflow-hidden flex flex-col"
+        className="flex-1 min-h-0 flex flex-col"
       >
         <main
           ref={containerRef}
@@ -421,20 +421,23 @@ const App: React.FC = () => {
       </ImageDropZone>
 
       {/* Input Bar - Fixed at bottom */}
-      <InputArea
-        inputValue={inputValue}
-        setInputValue={setInputValue}
-        onSend={handleSend}
-        onMicClick={handleMicClick}
-        images={images}
-        onImageSelect={handleFileSelect}
-        onRemoveImage={removeImage}
-        onPaste={handlePaste}
-        onStopGeneration={stopGeneration}
-        isGenerating={isGenerating}
-        isListening={isListening}
-        fileInputRef={fileInputRef}
-      />
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-gray-50 via-gray-50/95 dark:from-[#0B0D18] dark:via-[#0B0D18]/95 to-transparent pt-4 backdrop-blur-sm">
+        <InputArea
+          inputValue={inputValue}
+          setInputValue={setInputValue}
+          onSend={handleSend}
+          onMicClick={handleMicClick}
+          images={images}
+          onImageSelect={handleFileSelect}
+          onRemoveImage={removeImage}
+          onPaste={handlePaste}
+          onStopGeneration={stopGeneration}
+          isGenerating={isGenerating}
+          isListening={isListening}
+          fileInputRef={fileInputRef}
+        />
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 pb-2">EchoBot can make mistakes. Check important info.</p>
+      </div>
 
       <SettingsErrorBoundary onClose={() => setIsSettingsOpen(false)}>
         <SettingsModal
