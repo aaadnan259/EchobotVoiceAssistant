@@ -47,7 +47,14 @@ class ConfigLoader:
         if os.getenv("ELEVENLABS_API_KEY"):
             cls._settings.setdefault("voice", {})["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY")
         if os.getenv("GEMINI_MODEL"):
-            cls._settings.setdefault("ai", {})["llm_model"] = os.getenv("GEMINI_MODEL")
+            env_model = os.getenv("GEMINI_MODEL")
+            print(f"GEMINI_MODEL env var found! Overriding to: {env_model}")
+            cls._settings.setdefault("ai", {})["llm_model"] = env_model
+        else:
+            # Default to gemini-2.0-flash if not set in env or yaml
+            if "ai" in cls._settings and "llm_model" not in cls._settings.get("ai", {}):
+                cls._settings.setdefault("ai", {})["llm_model"] = "gemini-2.0-flash"
+            print(f"Using model from settings: {cls._settings.get('ai', {}).get('llm_model')}")
         if os.getenv("PORCUPINE_ACCESS_KEY"):
             cls._settings.setdefault("voice", {})["porcupine_access_key"] = os.getenv("PORCUPINE_ACCESS_KEY")
         if os.getenv("OPENWEATHER_API_KEY"):
