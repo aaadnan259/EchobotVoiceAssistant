@@ -7,6 +7,7 @@ interface ImageDropZoneProps {
     onDragOver: (e: React.DragEvent) => void;
     onDragLeave: (e: React.DragEvent) => void;
     children: React.ReactNode;
+    className?: string;  // Accept className prop for flex layout support
 }
 
 export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
@@ -14,18 +15,19 @@ export const ImageDropZone: React.FC<ImageDropZoneProps> = ({
     onDrop,
     onDragOver,
     onDragLeave,
-    children
+    children,
+    className = ''  // Destructure with default empty string
 }) => {
     return (
         <div
-            className="relative w-full h-full"
+            className={`relative ${className}`}  // Spread className instead of hardcoding w-full h-full
             onDrop={onDrop}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
         >
             {children}
 
-            {/* Overlay */}
+            {/* Drag overlay */}
             {isDragging && (
                 <div className="absolute inset-0 z-50 rounded-2xl border-2 border-dashed border-purple-500 bg-purple-500/10 backdrop-blur-sm flex flex-col items-center justify-center animate-[fadeIn_0.2s]">
                     <div className="bg-white dark:bg-[#1E2335] p-6 rounded-2xl shadow-xl flex flex-col items-center gap-3">
