@@ -1,8 +1,11 @@
 import os
 import yaml
+import logging
 from dotenv import load_dotenv
 from typing import Any, Dict
-from utils.logger import logger
+
+# Use standard logging to avoid circular import with utils.logger
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
