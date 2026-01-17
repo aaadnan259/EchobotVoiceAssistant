@@ -1,14 +1,16 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
-import * as ReactWindowModule from 'react-window';
 import { ListChildComponentProps } from 'react-window';
 
-// Fix for production build where named exports might be missing
-const List = (ReactWindowModule as any).VariableSizeList || (ReactWindowModule as any).default?.VariableSizeList || ReactWindowModule.VariableSizeList;
+// react-window v2 has mixed CJS/ESM exports - use dynamic resolution
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import * as ReactWindowModule from 'react-window';
+const List = (ReactWindowModule as any).VariableSizeList ??
+    (ReactWindowModule as any).default?.VariableSizeList;
 
+// react-virtualized-auto-sizer has default export issues in production
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
-
-// Fix for production build where default export might be missing
-const AutoSizer = (AutoSizerModule as any).default || AutoSizerModule;
+const AutoSizer = (AutoSizerModule as any).default ?? AutoSizerModule;
 
 import { Message } from '../types';
 import MessageBubble from './MessageBubble';

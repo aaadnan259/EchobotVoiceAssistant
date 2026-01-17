@@ -1,84 +1,142 @@
-# EchoBot 2.0 - Advanced AI Assistant
+# EchoBot 2.0 - Advanced AI Voice Assistant
 
-EchoBot is a modular, voice-activated AI assistant featuring intent classification, LLM integration, persistent memory, and a modern web interface.
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-echobot--sics.onrender.com-purple)](https://echobot-sics.onrender.com)
+[![GitHub](https://img.shields.io/badge/GitHub-EchobotVoiceAssistant-blue)](https://github.com/aaadnan259/EchobotVoiceAssistant)
 
-## 🚀 Features
+EchoBot is a full-stack AI voice assistant featuring real-time streaming responses, conversation branching, multi-modal input, and a modern web interface.
 
-- **Voice Interaction**: Wake word detection ("Jarvis") and natural voice conversations.
-- **AI Intelligence**:
-  - **Intent Classification**: Locally trained ML model to route commands.
-  - **LLM Integration**: Falls back to OpenAI/Gemini for general chat.
-  - **Vector Memory**: Remembers past conversations and facts using ChromaDB.
-- **Plugin System**: Modular architecture for easy feature addition.
-  - Weather, Web Search (DuckDuckGo), Wikipedia, Calculator, Reminders, Time.
-- **Web UI**: Modern browser interface with chat history and real-time status.
-- **Engineering**: Async I/O, structured logging, secure config management.
+## 🌐 Live Demo
+
+**[https://echobot-sics.onrender.com](https://echobot-sics.onrender.com)**
+
+## ✨ Features
+
+- **AI Chat**: Real-time streaming responses via Google Gemini 2.0 Flash
+- **Voice Interaction**: Speech-to-text and text-to-speech via Web Speech API
+- **Multi-Modal Input**: Send images alongside text messages
+- **Conversation Branching**: Edit and regenerate messages with tree-based history
+- **Modern UI**: React 18 + TypeScript + TailwindCSS with dark/light themes
+- **Secure**: API keys stay server-side, XSS protection via DOMPurify
+- **PWA Ready**: Installable as a Progressive Web App
 
 ## 📂 Architecture
 
 ```
 EchoBot/
-├── config/             # Settings and Secrets
-├── plugins/            # Feature modules (Weather, Search, etc.)
-├── services/           # Core Services
-│   ├── audio/          # STT & TTS
-│   ├── llm/            # OpenAI Integration
-│   ├── memory/         # Vector Database
-│   └── ml/             # Intent Classifier
-├── storage/            # Databases and Logs
-├── web/                # FastAPI Backend & Frontend
-└── main.py             # Entry Point
+├── src/                    # React/TypeScript Frontend
+│   ├── components/         # UI Components
+│   ├── hooks/              # Custom React Hooks (19 total)
+│   ├── services/           # API Services
+│   ├── types.ts            # TypeScript Interfaces
+│   └── constants/          # App Configuration
+├── web/backend/            # Python FastAPI Backend
+│   └── app.py              # Main API Server
+├── config/                 # Settings & Config Loader
+├── services/               # Backend Services (LLM, Audio, Memory)
+├── scripts/                # Development Utilities
+├── Dockerfile              # Multi-stage Production Build
+└── main.py                 # Entry Point
 ```
 
-## 🛠️ Setup & Installation
+## 🛠️ Local Development Setup
 
-### 1. Prerequisites
-- Python 3.9+
-- Microsoft Visual C++ 14.0+ (for some audio libraries)
-- FFmpeg (for audio processing)
+### Prerequisites
+- Node.js 18+
+- Python 3.11+
+- npm or yarn
 
-### 2. Install Dependencies
+### 1. Clone & Install
+
 ```bash
+git clone https://github.com/aaadnan259/EchobotVoiceAssistant.git
+cd EchobotVoiceAssistant
+
+# Install frontend dependencies
+npm install
+
+# Install backend dependencies
 pip install -r requirements.txt
 ```
 
-### 3. Configuration
-1. Rename `.env.example` to `.env` (if provided) or create one with:
+### 2. Environment Variables
+
+Copy `.env.example` to `.env` and configure:
+
 ```ini
+# Required
+GEMINI_API_KEY=your_gemini_api_key_here
+# OR
+GOOGLE_API_KEY=your_google_api_key_here
+
+# Optional
 OPENAI_API_KEY=sk-...
-GOOGLE_API_KEY=AIza...
 ELEVENLABS_API_KEY=...
 OPENWEATHER_API_KEY=...
-PORCUPINE_ACCESS_KEY=...
+SENTRY_DSN=...                    # For error tracking
+FRONTEND_URL=https://your-domain  # For CORS in production
 ```
-**Deploying to Render/Vercel?**
-Ensure you add these secrets (especially `GOOGLE_API_KEY` and `OPENAI_API_KEY`) to your Environment Variables setting in the dashboard.
+
+### 3. Run Development Servers
+
+**Frontend (Vite dev server):**
+```bash
+npm run dev
+# Opens at http://localhost:5173
 ```
-2. Customize `config/settings.yaml` for voice preferences and defaults.
 
-### 4. Running EchoBot
-
-**Desktop Mode (Voice + Web Server):**
+**Backend (FastAPI):**
 ```bash
 python main.py
+# Runs at http://localhost:8000
 ```
-- The bot will start listening for "Jarvis".
-- The Web UI will be available at `http://localhost:8000`.
 
-**Web UI Only:**
+For full-stack development, run both simultaneously. The frontend proxies API requests to the backend.
+
+### 4. Build for Production
+
 ```bash
-python web/backend/app.py
+npm run build
+# Output in build/ directory
 ```
 
-## 🧠 How it Works
+## 🚀 Deployment
 
-1.  **Wake Word**: `pvporcupine` listens for the keyword "Jarvis" efficiently.
-2.  **Speech-to-Text**: Google Speech Recognition converts audio to text.
-3.  **Intent Classification**: A `scikit-learn` Logistic Regression model predicts if you want "weather", "search", or "chat".
-4.  **Routing**:
-    - **Commands**: Dispatched to specific Plugins (e.g., `WeatherPlugin`).
-    - **Chat**: Sent to `LLMService` (OpenAI) with context from `MemoryService`.
-5.  **Response**: The result is spoken back via `ElevenLabs` (or fallback) and displayed on the Web UI.
+### Render (Recommended)
 
-## 📝 License
+1. Connect your GitHub repository to Render
+2. Set environment variables in Render dashboard:
+   - `GEMINI_API_KEY` or `GOOGLE_API_KEY`
+   - `PORT=3000`
+3. Render auto-deploys on push using the Dockerfile
+
+### Docker
+
+```bash
+docker build -t echobot .
+docker run -p 3000:3000 -e GEMINI_API_KEY=your_key echobot
+```
+
+## 🧠 Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 18, TypeScript, Vite, TailwindCSS v4 |
+| Backend | Python, FastAPI, Uvicorn |
+| AI | Google Gemini 2.0 Flash |
+| State | Custom React Hooks (19 hooks for various concerns) |
+| Styling | TailwindCSS + shadcn/ui components |
+| Deployment | Docker multi-stage build, Render |
+
+## 📝 Key Files
+
+| File | Description |
+|------|-------------|
+| `src/hooks/useConversationTree.ts` | Conversation state with branching |
+| `src/services/geminiService.ts` | Gemini API client with SSE streaming |
+| `web/backend/app.py` | FastAPI backend, Gemini proxy |
+| `src/types.ts` | TypeScript interfaces |
+| `src/constants/index.ts` | App configuration |
+
+## 📄 License
+
 MIT License
