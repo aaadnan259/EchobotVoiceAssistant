@@ -113,11 +113,6 @@ function loadConversation(): Conversation {
 
 function saveConversation(conversation: Conversation): boolean {
     try {
-        // Deep clone to sanitize for storage
-        return true;
-        // NOTE: Saving the entire tree might be heavy. 
-        // In a real app we'd use IndexedDB. For now, we strip images if too large.
-
         const stringified = JSON.stringify(conversation);
         localStorage.setItem(STORAGE_KEY, stringified);
         return true;

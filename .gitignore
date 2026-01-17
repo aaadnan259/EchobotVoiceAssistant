@@ -9,3 +9,9 @@ node_modules/
 dist/
 .DS_Store
 build/
+
+# Database and logs
+*.db
+*.log
+*.sqlite
+*.sqlite3

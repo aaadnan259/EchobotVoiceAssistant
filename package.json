@@ -5,7 +5,6 @@
       "private": true,
       "dependencies": {
             "@google/genai": "^1.35.0",
-            "@google/generative-ai": "^0.24.1",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
             "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -78,7 +77,7 @@
       },
       "scripts": {
             "dev": "vite",
-            "start": "node server.js",
+            "start": "echo 'Use: python main.py' && exit 1",
             "build": "vite build"
       }
 }

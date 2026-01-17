@@ -7,6 +7,7 @@ import uvicorn
 import json
 import asyncio
 import threading
+from contextlib import asynccontextmanager
 from typing import List, Optional, Dict, Any
 import os
 import base64
@@ -20,7 +21,39 @@ from services.audio.voice_engine import VoiceEngine
 from utils.logger import logger
 from services.llm.llm_service import LLMService
 
-app = FastAPI(title="EchoBot Web UI")
+# Global state
+voice_engine = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """FastAPI lifespan context manager for startup/shutdown."""
+    global voice_engine
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    def status_callback(status, **kwargs):
+        payload = {"status": status, **kwargs}
+        if manager.active_connections and loop:
+            asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
+
+    if ConfigLoader.get("voice.enabled", False):
+        try:
+            voice_engine = VoiceEngine(status_callback=status_callback)
+            if loop:
+                t = threading.Thread(target=run_voice_loop, args=(loop,), daemon=True)
+                t.start()
+                logger.info("Voice Input Thread Started")
+        except Exception as e:
+            logger.error(f"Failed to start voice engine: {e}")
+    
+    yield  # App runs here
+    
+    # Shutdown cleanup (if needed)
+    logger.info("Shutting down EchoBot...")
+
+app = FastAPI(title="EchoBot Web UI", lifespan=lifespan)
 
 class ChatRequest(BaseModel):
     modelName: str = "gemini-2.0-flash"
@@ -33,12 +66,20 @@ def decode_image(base64_string: str):
     """Convert base64 string to dict for Gemini."""
     if not base64_string:
         return None
+    
+    # Detect MIME type from data URI header
+    mime_type = "image/jpeg"  # default
     if "base64," in base64_string:
+        header = base64_string.split("base64,")[0]
+        if "image/png" in header:
+            mime_type = "image/png"
+        elif "image/webp" in header:
+            mime_type = "image/webp"
+        elif "image/gif" in header:
+            mime_type = "image/gif"
         base64_string = base64_string.split("base64,")[1]
     
-    # Return as Part object format or just bytes if client handles it
-    # Client.models.generate_content supports bytes directly usually
-    return {"mime_type": "image/jpeg", "data": base64_string}
+    return {"mime_type": mime_type, "data": base64_string}
 
 @app.post("/api/gemini/chat")
 async def gemini_chat(request: ChatRequest):
@@ -123,13 +164,20 @@ async def gemini_chat_simple(request: ChatRequest):
     return {"text": response.text}
 
 
-# CORS
+# CORS - Restrict to known origins
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:8000",
+    os.getenv("FRONTEND_URL", ""),
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[o for o in ALLOWED_ORIGINS if o],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # --- Static Files & Template Configuration (Robust Fix) ---
@@ -223,29 +271,6 @@ def run_voice_loop(loop):
         except Exception:
             import time
             time.sleep(1)
-
-@app.on_event("startup")
-async def startup_event():
-    global voice_engine
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    def status_callback(status, **kwargs):
-        payload = {"status": status, **kwargs}
-        if manager.active_connections and loop:
-             asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
-
-    if ConfigLoader.get("voice.enabled", False):
-        try:
-            voice_engine = VoiceEngine(status_callback=status_callback)
-            if loop:
-                t = threading.Thread(target=run_voice_loop, args=(loop,), daemon=True)
-                t.start()
-                logger.info("Voice Input Thread Started")
-        except Exception as e:
-            logger.error(f"Failed to start voice engine: {e}")
 
 # --- Core Processing Logic ---
 async def process_user_request(user_text: str):
