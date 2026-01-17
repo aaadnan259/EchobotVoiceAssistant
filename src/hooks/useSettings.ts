@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { AppSettings } from '../types';
 import { STORAGE_KEYS, DEFAULT_SETTINGS } from '../constants';
+import { getThemeById } from '../utils/themes';
 
 const { SETTINGS: STORAGE_KEY } = STORAGE_KEYS;
 
@@ -27,16 +28,8 @@ export function useSettings() {
         }
     });
 
-    // Apply theme and persist settings
+    // Persist settings to localStorage
     useEffect(() => {
-        // Apply theme to document
-        if (settings.theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-
-        // Persist to localStorage
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
         } catch (e) {
@@ -47,7 +40,7 @@ export function useSettings() {
     const toggleTheme = useCallback(() => {
         setSettings(prev => ({
             ...prev,
-            theme: prev.theme === 'dark' ? 'light' : 'dark'
+            theme: prev.theme === 'light' ? 'dark' : 'light'
         }));
     }, []);
 
@@ -59,12 +52,18 @@ export function useSettings() {
         setSettings(DEFAULT_SETTINGS);
     }, []);
 
+    // Check if current theme is a dark theme (forest, sunset, ocean, dark, etc.)
+    const isDarkMode = useMemo(() => {
+        const theme = getThemeById(settings.theme);
+        return theme.type === 'dark';
+    }, [settings.theme]);
+
     return {
         settings,
         setSettings,
         toggleTheme,
         updateSettings,
         resetSettings,
-        isDarkMode: settings.theme === 'dark'
+        isDarkMode
     };
 }
