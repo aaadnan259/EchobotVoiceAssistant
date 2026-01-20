@@ -19,9 +19,7 @@ const {
     DEV_WS_PORT,
 } = WEBSOCKET_CONFIG;
 
-// =============================================================================
-// Types
-// =============================================================================
+
 
 interface WebSocketMessage {
     type?: string;
@@ -49,21 +47,13 @@ interface UseSecureWebSocketOptions {
     onError?: (error: Event | Error) => void;
     /** Called when authentication fails */
     onAuthError?: (message: string) => void;
-    /** Base reconnect interval in ms */
     reconnectInterval?: number;
-    /** Maximum reconnection attempts */
     maxReconnectAttempts?: number;
-    /** Authentication configuration */
     authConfig?: WSAuthConfig;
-    /** Enable heartbeat/ping-pong (default: true) */
     enableHeartbeat?: boolean;
-    /** Heartbeat interval in ms (default: 30000) */
     heartbeatInterval?: number;
-    /** Enable client-side rate limiting (default: true) */
     enableRateLimit?: boolean;
-    /** Max messages per minute (default: 60) */
     rateLimit?: number;
-    /** Allowed origins for connection (development only) */
     allowedOrigins?: string[];
 }
 
@@ -101,21 +91,6 @@ function getWebSocketUrl(): string {
     return `${protocol}//${host}${port}${WS_PATH}`;
 }
 
-// =============================================================================
-// Hook
-// =============================================================================
-
-/**
- * Secure WebSocket hook with authentication, heartbeat, and rate limiting.
- * 
- * Features:
- * - Token-based authentication on connect
- * - Origin validation
- * - Automatic reconnection with exponential backoff
- * - Heartbeat/ping-pong for connection health
- * - Client-side rate limiting
- * - Connection state management
- */
 export function useSecureWebSocket(
     options: UseSecureWebSocketOptions = {}
 ): UseSecureWebSocketReturn {

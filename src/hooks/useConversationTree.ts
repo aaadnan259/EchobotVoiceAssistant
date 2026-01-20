@@ -147,62 +147,10 @@ export function useConversationTree() {
 
 
     // Derived state: Get linear message history for the active branch
-    // Traverses BACKWARDS from the latest message in the branch to the root
     const currentMessages = useMemo(() => {
         const { messages, branches, activeBranchId } = conversation;
-        // Find the "leaf" or latest message of the active branch.
-        // Actually, simpler approach:
-        // We need to trace from the *end*. 
-        // But how do we know the "end"? 
-        // A branch is a pointer to the LEAF message? Or strictly a parallel reality?
-
-        // Let's model simpler: A message belongs to a branch.
-        // But branches split.
-        // If msg A -> msg B.
-        // I want to branch off A to create C.
-        // So A will have children B and C.
-
-        // Let's just traverse everything and sort by timestamp, filtering by "path".
-        // Path Traversal:
-        // Start from all messages. Filter those that belong to current active branch ID?
-        // No, because a new branch INHERITS the parent's history.
-
-        // CORRECT APPROACH:
-        // 1. Identify the 'leaf' message of the current branch? 
-        //    Unreliable if we just append.
-
-        // Let's recursively build the chain for the current view.
-        // We need to find the latest message that points to the active branch (or parents).
-
-        // Efficient way:
-        // Store `lastMessageId` in the Branch definition?
-        // Let's rely on `branchId` tag on messages for now + sorting.
-
-        // Actually, if we just want the "current view", we collect all messages
-        // that are "ancestors" of the HEAD of the branch.
-        // But we don't track HEAD explicitly.
-
-        // Alternative: Filter all messages that match `branchId` OR are ancestors of the first message of this branch.
-        // This gets complex.
-
-        // SIMPLIFIED MODEL for this task:
-        // Just filter messages by `branchId === activeBranchId`.
-        // BUT, that means creating a new branch copies nothing?
-        // NO, we want history.
-
-        // Let's do this:
-        // `currentMessages` is a standard array.
-        // When we `createBranch(fromMessageId)`, we define that the new branch *starts* at `fromMessageId`.
-        // But visually, we want to see the whole conversation history up to that point.
-
-        // Algorithm:
-        // 1. Find all messages in the `activeBranchId`.
-        // 2. Find the `parentMessageId` of the `activeBranchId` (the fork point).
-        // 3. Recursively add ancestors of that parent message.
 
         const result: Message[] = [];
-        const messagesByParent: Record<string, Message[]> = {}; // optimization if needed
-
         // 1. Get messages strictly in this branch
         const branchMessages = Object.values(messages).filter(m => m.branchId === activeBranchId);
 
@@ -213,14 +161,13 @@ export function useConversationTree() {
         let currentBranch = branches[activeBranchId];
         let parentMsgId = currentBranch?.parentMessageId;
 
-        // Collect history from parent branches
         const history: Message[] = [];
 
         while (parentMsgId) {
             const msg = messages[parentMsgId];
             if (msg) {
                 history.push(msg);
-                parentMsgId = msg.parentId ?? null; // Traverse up message tree
+                parentMsgId = msg.parentId ?? null;
             } else {
                 break;
             }
@@ -236,9 +183,7 @@ export function useConversationTree() {
         setConversation(prev => {
             const { messages, activeBranchId } = prev;
 
-            // Find the last message in current view to link as parent
-            // (Re-calculate currentMessages logic or track lastId)
-            // For efficiency, let's find the message in this branch with latest timestamp
+            // Find latest message in this branch
             const branchMsgs = Object.values(messages).filter(m => m.branchId === activeBranchId);
             const lastMsg = branchMsgs.length > 0
                 ? branchMsgs.sort((a, b) => b.timestamp - a.timestamp)[0]
@@ -365,9 +310,6 @@ export function useConversationTree() {
 
     // Navigate between siblings (messages that share the same parent)
     const navigateUncles = useCallback((currentMessageId: string, direction: 'prev' | 'next') => {
-        // Find parent of current message
-        // Find all children of that parent
-        // Switch to the branch of the adjacent child
         setConversation(prev => {
             const currentMsg = prev.messages[currentMessageId];
             if (!currentMsg) return prev;
@@ -390,8 +332,6 @@ export function useConversationTree() {
             }
 
             if (targetSibling) {
-                // We need to find which branch this sibling belongs to?
-                // Or just switch active branch to the sibling's branchId
                 return { ...prev, activeBranchId: targetSibling.branchId! };
             }
 
@@ -436,7 +376,7 @@ export function useConversationTree() {
             const blob = new Blob([content], { type: 'application/json' });
             return blob;
         } else {
-            // Markdown/HTML exports the CURRENT VIEW (linear)
+            // Export current view (linear)
             const msgs = currentMessages;
             if (format === 'markdown') {
                 content = generateMarkdown(msgs, options);
@@ -455,14 +395,8 @@ export function useConversationTree() {
         try {
             const parsed = JSON.parse(jsonString);
             if (validateImport(parsed)) {
-                // If legacy array, convert (logic reused from loadConversation or just set and let it migrate on next load? 
-                // Better to migrate immediately).
                 if (Array.isArray(parsed)) {
-                    // Manual migration here or rely on loadConversation structure?
-                    // Let's reuse the migration logic from loadConversation by creating a temporary function or just duplicating simplified version.
-                    // Simpler: Just set it. The hook state setter doesn't automatically migrate array->tree unless we explicitly do it.
-
-                    // Let's do a robust migration:
+                    // Legacy migration: convert array to tree structure
                     const messagesMap: Record<string, Message> = {};
                     let prevId: string | null = null;
                     const MAIN_BRANCH_ID = 'main';

@@ -8,9 +8,6 @@ export interface ExportOptions {
 
 export type ExportFormat = 'json' | 'markdown' | 'html';
 
-/**
- * Filter messages based on options
- */
 const filterMessages = (messages: Message[], options?: ExportOptions): Message[] => {
     let filtered = [...messages];
 
@@ -26,9 +23,6 @@ const filterMessages = (messages: Message[], options?: ExportOptions): Message[]
     return filtered;
 };
 
-/**
- * Generate a JSON string for the full conversation tree (Backup)
- */
 export const generateJSON = (conversation: Conversation, options?: ExportOptions): string => {
     // If excluding images, deep clone and strip
     if (options && !options.includeImages) {
@@ -41,9 +35,6 @@ export const generateJSON = (conversation: Conversation, options?: ExportOptions
     return JSON.stringify(conversation, null, 2);
 };
 
-/**
- * Generate Markdown for a linear message history
- */
 export const generateMarkdown = (messages: Message[], options?: ExportOptions): string => {
     const filtered = filterMessages(messages, options);
     const date = new Date().toLocaleDateString();
@@ -80,9 +71,6 @@ export const generateMarkdown = (messages: Message[], options?: ExportOptions): 
     return md;
 };
 
-/**
- * Generate HTML for a linear message history
- */
 export const generateHTML = (messages: Message[], options?: ExportOptions): string => {
     const filtered = filterMessages(messages, options);
     const date = new Date().toLocaleDateString();
@@ -149,9 +137,6 @@ export const generateHTML = (messages: Message[], options?: ExportOptions): stri
     return html;
 };
 
-/**
- * Validate imported JSON data
- */
 export const validateImport = (data: any): data is Conversation => {
     if (!data || typeof data !== 'object') return false;
 

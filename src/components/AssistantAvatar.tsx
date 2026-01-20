@@ -8,7 +8,7 @@ export function AssistantAvatar({ isActive }: AssistantAvatarProps) {
   return (
     <div className="flex flex-col items-center gap-6">
       {/* Glowing Orb */}
-      <motion.div 
+      <motion.div
         className="relative"
         animate={{
           y: [0, -15, 0],
@@ -19,7 +19,7 @@ export function AssistantAvatar({ isActive }: AssistantAvatarProps) {
           ease: "easeInOut",
         }}
       >
-        {/* Outer glow rings */}
+        {/* Outer glow */}
         <motion.div
           className="absolute inset-0 rounded-full bg-blue-500/40 blur-3xl"
           animate={{
@@ -54,14 +54,14 @@ export function AssistantAvatar({ isActive }: AssistantAvatarProps) {
             boxShadow: '0 0 60px rgba(107, 127, 255, 0.6), inset 0 -20px 40px rgba(0, 0, 0, 0.3)',
           }}
         >
-          {/* Top highlight - creates 3D sphere effect */}
-          <div 
+          {/* Top highlight */}
+          <div
             className="absolute top-4 left-1/2 w-16 h-16 rounded-full bg-gradient-to-br from-white/40 to-transparent blur-xl"
             style={{
               transform: 'translateX(-50%)',
             }}
           />
-          
+
           {/* Eyes container */}
           <div className="absolute top-1/2 left-1/2 flex gap-4" style={{ transform: 'translate(-50%, -50%)' }}>
             {/* Left eye */}
@@ -80,7 +80,7 @@ export function AssistantAvatar({ isActive }: AssistantAvatarProps) {
                 boxShadow: '0 0 20px rgba(255, 255, 255, 0.8)',
               }}
             />
-            
+
             {/* Right eye */}
             <motion.div
               className="w-8 h-3 rounded-full bg-white shadow-lg"
@@ -100,7 +100,7 @@ export function AssistantAvatar({ isActive }: AssistantAvatarProps) {
           </div>
 
           {/* Bottom shadow for depth */}
-          <div 
+          <div
             className="absolute bottom-0 left-1/2 w-20 h-10 rounded-full bg-black/30 blur-lg"
             style={{
               transform: 'translateX(-50%)',

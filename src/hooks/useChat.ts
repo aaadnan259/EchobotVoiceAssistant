@@ -76,12 +76,10 @@ export function useChat({
             for await (const chunk of stream) {
                 if (stopGenerationRef.current) break;
 
-                // chunk is a string from streamGeminiResponse, not an object
                 const chunkText = typeof chunk === 'string' ? chunk : (chunk?.text || '');
                 fullText += chunkText;
 
-                // Note: grounding metadata would come from the backend if needed
-                // For now, the backend returns plain text chunks
+                // Grounding metadata would be processed here if provided by backend
 
                 updateMessage(botMsgId, {
                     text: fullText

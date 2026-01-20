@@ -57,17 +57,9 @@ class LLMService:
 
     def _get_google_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
         try:
-            logger.info(f"=== GEMINI 2.0 API CALL ===")
-            logger.info(f"Model: {self.model_name}")
+            logger.info(f"GenAI Request: {self.model_name}")
             
-            # Build contents for chat
-            # New SDK format: contents=[{'role': '...', 'parts': [{'text': '...'}]}]
             contents = []
-            
-            # Handle System Prompt separately if needed, but Gemini 2.0 supports system instruction in generation config
-            # Or we can prepend it to the first message or use 'config' param.
-            # Client.models.generate_content(..., config={'system_instruction': ...})
-            
             system_instruction = None
             
             for msg in messages:
@@ -86,20 +78,6 @@ class LLMService:
                 elif role == "assistant" or role == "model":
                     contents.append({"role": "model", "parts": [{"text": content}]})
 
-            logger.info(f"Sending {len(contents)} messages to Gemini")
-            
-            # Config for system instruction
-            config = None
-            if system_instruction:
-                # Note: passing system_instruction in config might vary by SDK version, 
-                # but commonly it's supported. If fails, we might just prepend.
-                # Checking recent SDK docs pattern:
-                # config=types.GenerateContentConfig(system_instruction=...)
-                # For simplicity in this migration step to fix EMPTY response, we'll try passing it or fall back.
-                pass 
-
-            # GENERATE
-            # Note: For tools, we'd add 'tools' param. Omitting for basic fix first.
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=contents,
@@ -107,7 +85,6 @@ class LLMService:
             )
             
             if response.text:
-                logger.info(f"Response received: {response.text[:50]}...")
                 return MockMessage(content=response.text)
             else:
                 logger.warning("Gemini returned empty text.")
@@ -115,7 +92,7 @@ class LLMService:
 
         except Exception as e:
             logger.error(f"Google Gemini Error: {e}", exc_info=True)
-            return MockMessage("I'm having trouble thinking with Gemini (New SDK) right now.")
+            return MockMessage("I'm having trouble thinking right now.")
 
     def _get_openai_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
         if not self.client:

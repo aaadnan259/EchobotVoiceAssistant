@@ -75,10 +75,6 @@ export interface VoiceSettings {
 export interface AppSettings {
   model: string;
   systemPrompt: string;
-  // voiceURI moved to voiceSettings, kept for temporary compat or removed?
-  // User request said "Update settings to include". Usually means structure change.
-  // But to avoid breaking valid code immediately, I'll keep it or map it.
-  // Implementation plan said: "Update AppSettings to include voiceSettings".
   voiceSettings: VoiceSettings;
   theme: string;
 }

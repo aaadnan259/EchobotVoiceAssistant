@@ -33,7 +33,6 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     const [isListening, setIsListening] = useState(false);
     const [isSupported, setIsSupported] = useState(false);
 
-    // Initialize speech recognition
     useEffect(() => {
         const SpeechRecognition =
             (window as any).SpeechRecognition ||

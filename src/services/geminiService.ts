@@ -2,22 +2,14 @@ import { Message } from "../types";
 import { logger } from "../utils/logger";
 
 /**
- * Streams a response from Gemini via the backend proxy.
- * This keeps the API key secure on the server side.
- * 
- * @param modelName - The Gemini model to use (e.g., "gemini-2.0-flash")
- * @param systemInstruction - System prompt for the AI
- * @param history - Previous messages in the conversation
- * @param newMessage - The new user message
- * @param image - Optional base64 data URI of an image
- * @returns An async generator that yields text chunks
+ * Streams response from Gemini via backend proxy.
  */
 export async function* streamGeminiResponse(
   modelName: string,
   systemInstruction: string,
   history: Message[],
   newMessage: string,
-  images?: string[] // Changed from single image
+  images?: string[]
 ): AsyncGenerator<string, void, unknown> {
   const response = await fetch('/api/gemini/chat', {
     method: 'POST',
@@ -30,8 +22,8 @@ export async function* streamGeminiResponse(
       history: history.map(msg => ({
         role: msg.role,
         text: msg.text,
-        images: msg.images, // Pass array
-        image: msg.image    // Pass legacy too just in case
+        images: msg.images,
+        image: msg.image
       })),
       newMessage,
       images
@@ -92,8 +84,7 @@ export async function* streamGeminiResponse(
 }
 
 /**
- * Non-streaming version for simpler use cases.
- * Returns the complete response at once.
+ * Non-streaming response.
  */
 export async function getGeminiResponse(
   modelName: string,
@@ -130,8 +121,7 @@ export async function getGeminiResponse(
 }
 
 /**
- * Wrapper that mimics the old API structure for easier migration.
- * Returns an object with an async iterator, similar to the Gemini SDK.
+ * Legacy wrapper for SDK compatibility.
  */
 export const streamGeminiResponseLegacy = async (
   modelName: string,
@@ -148,21 +138,13 @@ export const streamGeminiResponseLegacy = async (
     image
   );
 
-  // Return an object that mimics the Gemini SDK response structure
   return {
     [Symbol.asyncIterator]: () => ({
       async next() {
         const result = await generator.next();
-        if (result.done) {
-          return { done: true, value: undefined };
-        }
-        // Mimic the chunk structure from the Gemini SDK
-        return {
-          done: false,
-          value: {
-            text: () => result.value
-          }
-        };
+        return result.done
+          ? { done: true, value: undefined }
+          : { done: false, value: { text: () => result.value } };
       }
     })
   };

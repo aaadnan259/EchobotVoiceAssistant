@@ -89,12 +89,9 @@ async def gemini_chat(request: ChatRequest):
     
     # NEW SDK INITIALIZATION
     client = genai.Client(api_key=api_key)
-    
-    # FORCE MODEL
     target_model = "gemini-2.0-flash"
-    
-    # Prepare history
-    # New SDK expects: contents=[{'role': '...', 'parts': [{'text': '...'}]}]
+
+    # Format history for Gemini SDK
     gemini_contents = []
     
     for msg in request.history:
@@ -102,28 +99,18 @@ async def gemini_chat(request: ChatRequest):
         parts = [{"text": msg.get("text", "")}]
         gemini_contents.append({"role": role, "parts": parts})
     
-    # Current Message
+    # Process current message and images
     current_parts = [{"text": request.newMessage}]
     if request.images:
         for img_str in request.images:
             img_data = decode_image(img_str)
             if img_data:
-                # Assuming img_data is compatible dict
                 current_parts.append(img_data)
-                
-    # Add current message to user role
-    # Note: 'chat' structure in new SDK is managed differently (client.chats.create) 
-    # OR we can just append to contents and generate response.
-    # To support streaming, client.models.generate_content_stream(contents=...) is best if stateless.
-    # If stateful chat wanted: chat = client.chats.create(...)
-    # Let's use start_chat equivalents if we want history preservation context easy?
-    # Actually, generate_content_stream with full history is stateless standard.
     
     gemini_contents.append({"role": "user", "parts": current_parts})
     
     async def event_generator():
         try:
-            # NEW SDK STREAMING
             response = client.models.generate_content_stream(
                 model=target_model,
                 contents=gemini_contents,
@@ -146,19 +133,17 @@ async def gemini_chat(request: ChatRequest):
 
 @app.post("/api/gemini/chat-simple")
 async def gemini_chat_simple(request: ChatRequest):
-    """Non-streaming fallback"""
+    """Non-streaming request."""
     api_key = ConfigLoader.get("ai.google_api_key")
     if not api_key:
          raise HTTPException(status_code=500, detail="Google API Key not configured")
          
     client = genai.Client(api_key=api_key)
-    
-    # FORCE MODEL
     target_model = "gemini-2.0-flash"
 
     response = client.models.generate_content(
         model=target_model,
-        contents=[request.newMessage], # simplified
+        contents=[request.newMessage],
         config={'system_instruction': request.systemInstruction}
     )
     return {"text": response.text}
@@ -216,9 +201,7 @@ if dist_dir:
     assets_dir = os.path.join(dist_dir, "assets")
     if os.path.exists(assets_dir):
          app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
-         logger.info(f"Mounted /assets from {assets_dir}")
-    else:
-         logger.warning(f"Assets directory not found at {assets_dir}")
+
 
 else:
     logger.warning("No build/dist directory found! Falling back to dev mode/templates.")
@@ -303,10 +286,8 @@ async def process_user_request(user_text: str):
 
     response_text = getattr(response_message, 'content', "")
 
-    # Tool execution (omitted for brevity in this fix, assuming text flow for now)
-    # If using tools, LLMService needs to handle tool calls in new SDK format.
-    # Current LLMService implementation (previous step) returned MockMessage(content=text) only.
-    # So we proceed with response_text.
+    # Proceed with text response
+
 
     if not response_text:
         response_text = "I'm sorry, I couldn't generate a response."
