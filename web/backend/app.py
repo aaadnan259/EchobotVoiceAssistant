@@ -362,7 +362,29 @@ class SettingsUpdate(BaseModel):
 
 @app.get("/api/settings")
 async def get_settings():
-    return ConfigLoader._settings
+    settings = ConfigLoader._settings.copy()
+
+    # Redact sensitive keys
+    if "ai" in settings:
+        settings["ai"] = settings["ai"].copy()
+        if "google_api_key" in settings["ai"]:
+            settings["ai"]["google_api_key"] = "REDACTED"
+        if "openai_api_key" in settings["ai"]:
+            settings["ai"]["openai_api_key"] = "REDACTED"
+
+    if "voice" in settings:
+        settings["voice"] = settings["voice"].copy()
+        if "elevenlabs_api_key" in settings["voice"]:
+            settings["voice"]["elevenlabs_api_key"] = "REDACTED"
+        if "porcupine_access_key" in settings["voice"]:
+            settings["voice"]["porcupine_access_key"] = "REDACTED"
+
+    if "plugins" in settings:
+        settings["plugins"] = settings["plugins"].copy()
+        if "openweather_api_key" in settings["plugins"]:
+            settings["plugins"]["openweather_api_key"] = "REDACTED"
+
+    return settings
 
 @app.post("/api/settings")
 async def update_settings(settings: SettingsUpdate):
