@@ -21,9 +21,7 @@ export async function* streamGeminiResponse(
       systemInstruction,
       history: history.map(msg => ({
         role: msg.role,
-        text: msg.text,
-        images: msg.images,
-        image: msg.image
+        text: msg.text
       })),
       newMessage,
       images
@@ -103,8 +101,7 @@ export async function getGeminiResponse(
       systemInstruction,
       history: history.map(msg => ({
         role: msg.role,
-        text: msg.text,
-        image: msg.image
+        text: msg.text
       })),
       newMessage,
       image
