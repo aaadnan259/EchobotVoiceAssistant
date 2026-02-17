@@ -23,15 +23,25 @@ from services.llm.llm_service import LLMService
 
 # Global state
 voice_engine = None
+gemini_client = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager for startup/shutdown."""
-    global voice_engine
+    global voice_engine, gemini_client
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
         loop = None
+
+    # Initialize Gemini Client
+    api_key = ConfigLoader.get("ai.google_api_key")
+    if api_key:
+        try:
+             gemini_client = genai.Client(api_key=api_key)
+             logger.info("Shared Gemini Client Initialized")
+        except Exception as e:
+             logger.error(f"Failed to initialize Shared Gemini Client: {e}")
 
     def status_callback(status, **kwargs):
         payload = {"status": status, **kwargs}
@@ -91,12 +101,15 @@ def decode_image(base64_string: str):
 
 @app.post("/api/gemini/chat")
 async def gemini_chat(request: ChatRequest):
-    api_key = ConfigLoader.get("ai.google_api_key")
-    if not api_key:
-         raise HTTPException(status_code=500, detail="Google API Key not configured on server")
+    global gemini_client
     
-    # NEW SDK INITIALIZATION
-    client = genai.Client(api_key=api_key)
+    if not gemini_client:
+         api_key = ConfigLoader.get("ai.google_api_key")
+         if not api_key:
+              raise HTTPException(status_code=500, detail="Google API Key not configured on server")
+         gemini_client = genai.Client(api_key=api_key)
+
+    client = gemini_client
     target_model = "gemini-2.0-flash"
 
     # Format history for Gemini SDK
@@ -142,11 +155,15 @@ async def gemini_chat(request: ChatRequest):
 @app.post("/api/gemini/chat-simple")
 async def gemini_chat_simple(request: ChatRequest):
     """Non-streaming request."""
-    api_key = ConfigLoader.get("ai.google_api_key")
-    if not api_key:
-         raise HTTPException(status_code=500, detail="Google API Key not configured")
+    global gemini_client
+
+    if not gemini_client:
+         api_key = ConfigLoader.get("ai.google_api_key")
+         if not api_key:
+              raise HTTPException(status_code=500, detail="Google API Key not configured")
+         gemini_client = genai.Client(api_key=api_key)
          
-    client = genai.Client(api_key=api_key)
+    client = gemini_client
     target_model = "gemini-2.0-flash"
 
     response = client.models.generate_content(
