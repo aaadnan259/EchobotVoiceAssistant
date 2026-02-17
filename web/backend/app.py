@@ -351,25 +351,6 @@ async def update_settings(settings: SettingsUpdate):
     settings_safe["google_api_key"] = "REDACTED"
     return {"status": "success", "settings": settings}
 
-@app.get("/api/debug/static")
-def debug_static():
-    """Debug endpoint to check static file setup."""
-    result = {
-        "current_dir": current_dir,
-        "project_root": project_root,
-        "dist_dir": dist_dir,
-        "dist_exists": os.path.exists(dist_dir) if dist_dir else False,
-        "contents": [],
-        "index_exists": False
-    }
-    if dist_dir and os.path.exists(dist_dir):
-        try:
-            result["contents"] = os.listdir(dist_dir)
-            result["index_exists"] = os.path.exists(os.path.join(dist_dir, "index.html"))
-        except Exception as e:
-            result["error"] = str(e)
-    return result
-
 @app.get("/{full_path:path}")
 async def serve_spa_catchall(full_path: str, request: Request):
     if full_path.startswith("api/") or full_path.startswith("assets/") or full_path.startswith("static/"):
