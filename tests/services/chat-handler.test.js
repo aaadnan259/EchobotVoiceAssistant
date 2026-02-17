@@ -145,6 +145,31 @@ describe('ChatHandler', () => {
             const error = new Error('Unknown error');
             expect(chatHandler.getUserFriendlyError(error)).toContain('Something went wrong');
         });
+
+        it('should return network error message for "network" error', () => {
+            const error = new Error('Network error occurred');
+            expect(chatHandler.getUserFriendlyError(error)).toContain('Network connection issue');
+        });
+
+        it('should return network error message for "fetch" error', () => {
+            const error = new Error('Fetch failed');
+            expect(chatHandler.getUserFriendlyError(error)).toContain('Network connection issue');
+        });
+
+        it('should return configuration error message for "api key" error', () => {
+            const error = new Error('Invalid API key provided');
+            expect(chatHandler.getUserFriendlyError(error)).toContain('Service configuration error');
+        });
+
+        it('should return busy error message for "quota" error', () => {
+            const error = new Error('Quota exceeded');
+            expect(chatHandler.getUserFriendlyError(error)).toContain('Service is temporarily busy');
+        });
+
+        it('should return busy error message for "rate limit" error', () => {
+            const error = new Error('Rate limit exceeded');
+            expect(chatHandler.getUserFriendlyError(error)).toContain('Service is temporarily busy');
+        });
     });
 
     describe('checkHealth', () => {
