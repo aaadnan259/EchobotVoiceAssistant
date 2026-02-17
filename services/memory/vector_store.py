@@ -43,7 +43,12 @@ class MemoryService:
                 query_texts=[query_text],
                 n_results=n_results
             )
-            return results['documents'][0] if results['documents'] else []
+
+            # Ensure results is valid and has documents
+            if not results or not results.get('documents'):
+                return []
+
+            return results['documents'][0]
         except Exception as e:
             logger.error(f"Error querying memory: {e}")
             return []
