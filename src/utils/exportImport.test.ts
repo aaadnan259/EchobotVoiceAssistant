@@ -16,6 +16,15 @@ describe('validateImport', () => {
     expect(validateImport(validV2)).toBe(true);
   });
 
+  it('should return true for V2 with empty messages and branches', () => {
+    const validV2Empty = {
+      messages: {},
+      branches: {},
+      activeBranchId: 'branch-main'
+    };
+    expect(validateImport(validV2Empty)).toBe(true);
+  });
+
   it('should return false if "messages" is missing', () => {
     const invalid = {
       branches: {},
@@ -36,6 +45,33 @@ describe('validateImport', () => {
     const invalid = {
       messages: {},
       branches: {}
+    };
+    expect(validateImport(invalid)).toBe(false);
+  });
+
+  it('should return false if "messages" is not an object', () => {
+    const invalid = {
+      messages: [],
+      branches: {},
+      activeBranchId: 'main'
+    };
+    expect(validateImport(invalid)).toBe(false);
+  });
+
+  it('should return false if "branches" is not an object', () => {
+    const invalid = {
+      messages: {},
+      branches: 'not-an-object',
+      activeBranchId: 'main'
+    };
+    expect(validateImport(invalid)).toBe(false);
+  });
+
+  it('should return false if "activeBranchId" is not a string', () => {
+    const invalid = {
+      messages: {},
+      branches: {},
+      activeBranchId: 123
     };
     expect(validateImport(invalid)).toBe(false);
   });
