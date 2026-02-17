@@ -114,7 +114,10 @@ export function useMessages() {
 
     // Persist messages to localStorage
     useEffect(() => {
-        saveMessages(messages);
+        const timeoutId = setTimeout(() => {
+            saveMessages(messages);
+        }, 1000);
+        return () => clearTimeout(timeoutId);
     }, [messages]);
 
     // Add a new message
