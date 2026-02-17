@@ -1,4 +1,4 @@
-class ChatHandler {
+export class ChatHandler {
     constructor() {
         this.retryAttempts = 3;
         this.retryDelay = 1000;
