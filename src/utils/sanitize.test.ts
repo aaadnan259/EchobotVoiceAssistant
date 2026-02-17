@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { sanitizeRichText } from './sanitize';
+import { sanitizeRichText, sanitizeUrl } from './sanitize';
 
 describe('sanitizeRichText', () => {
     it('should return empty string for null/undefined/non-string input', () => {
@@ -80,5 +80,70 @@ describe('sanitizeRichText', () => {
         const input = '<div data-test="test">Div</div>';
         const output = sanitizeRichText(input);
         expect(output).toBe('<div>Div</div>');
+    });
+});
+
+describe('sanitizeUrl', () => {
+    it('should return empty string for null/undefined/non-string input', () => {
+        expect(sanitizeUrl(null as any)).toBe('');
+        expect(sanitizeUrl(undefined as any)).toBe('');
+        expect(sanitizeUrl(123 as any)).toBe('');
+    });
+
+    it('should return original url if it starts with safe protocol', () => {
+        expect(sanitizeUrl('http://example.com')).toBe('http://example.com');
+        expect(sanitizeUrl('https://example.com')).toBe('https://example.com');
+        expect(sanitizeUrl('mailto:user@example.com')).toBe('mailto:user@example.com');
+        expect(sanitizeUrl('tel:+1234567890')).toBe('tel:+1234567890');
+    });
+
+    it('should return original url if it is relative or anchor', () => {
+        expect(sanitizeUrl('/path/to/resource')).toBe('/path/to/resource');
+        expect(sanitizeUrl('./path/to/resource')).toBe('./path/to/resource');
+        expect(sanitizeUrl('../path/to/resource')).toBe('../path/to/resource');
+        expect(sanitizeUrl('#anchor')).toBe('#anchor');
+    });
+
+    it('should prepend https:// if no protocol is present', () => {
+        expect(sanitizeUrl('example.com')).toBe('https://example.com');
+        expect(sanitizeUrl('www.google.com')).toBe('https://www.google.com');
+    });
+
+    it('should return empty string for dangerous protocols', () => {
+        expect(sanitizeUrl('javascript:alert(1)')).toBe('');
+        expect(sanitizeUrl('data:text/html,alert(1)')).toBe('');
+        expect(sanitizeUrl('vbscript:alert(1)')).toBe('');
+        expect(sanitizeUrl('file:///etc/passwd')).toBe('');
+    });
+
+    it('should handle case insensitivity for dangerous protocols', () => {
+        expect(sanitizeUrl('JAVASCRIPT:alert(1)')).toBe('');
+        expect(sanitizeUrl('Data:text/html,alert(1)')).toBe('');
+    });
+
+    it('should handle whitespace around url', () => {
+        expect(sanitizeUrl('  javascript:alert(1)  ')).toBe('');
+        expect(sanitizeUrl('  http://example.com  ')).toBe('  http://example.com  '); // trimmed check, but returns original?
+        // Wait, implementation:
+        // const trimmed = url.trim().toLowerCase();
+        // if (hasProtocol...) return url;
+        // So it returns the UNTRIMMED url.
+    });
+
+    it('should return empty string for unknown protocols with ://', () => {
+         // 'ftp://example.com' - ftp is not in safeProtocols.
+         // trimmed includes '://'.
+         // So it returns ''.
+         expect(sanitizeUrl('ftp://example.com')).toBe('');
+    });
+
+    it('should be robust against bypass attempts', () => {
+        // javascript :alert(1) - space before colon. Not a valid protocol.
+        // Should be treated as domain/path and prepended with https:// or kept if relative?
+        // 'javascript :alert(1)'.trim().toLowerCase() = 'javascript :alert(1)'
+        // No protocol match.
+        // No :// match.
+        // Returns https://javascript :alert(1). Safe.
+        expect(sanitizeUrl('javascript :alert(1)')).toBe('https://javascript :alert(1)');
     });
 });
