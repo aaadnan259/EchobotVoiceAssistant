@@ -35,6 +35,10 @@ class TestLLMService(unittest.TestCase):
         self.mock_logger_patcher = patch('services.llm.llm_service.logger')
         self.mock_logger = self.mock_logger_patcher.start()
 
+        # Mock MemoryService using patch.dict on sys.modules to isolate it
+        self.memory_module_patcher = patch.dict(sys.modules, {'services.memory.vector_store': MagicMock()})
+        self.memory_module_patcher.start()
+
         # Initialize service
         self.service = LLMService()
 
@@ -42,6 +46,7 @@ class TestLLMService(unittest.TestCase):
         self.mock_config_patcher.stop()
         self.mock_genai_patcher.stop()
         self.mock_logger_patcher.stop()
+        self.memory_module_patcher.stop()
 
     def test_google_response_success(self):
         """Test successful response from Google Gemini."""
