@@ -38,19 +38,27 @@ async def lifespan(app: FastAPI):
         if manager.active_connections and loop:
             asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
 
+    voice_task = None
     if ConfigLoader.get("voice.enabled", False):
         try:
             voice_engine = VoiceEngine(status_callback=status_callback)
-            if loop:
-                t = threading.Thread(target=run_voice_loop, args=(loop,), daemon=True)
-                t.start()
-                logger.info("Voice Input Thread Started")
+            # Start as asyncio Task instead of thread
+            voice_task = asyncio.create_task(run_voice_loop())
+            logger.info("Voice Input Task Started")
         except Exception as e:
             logger.error(f"Failed to start voice engine: {e}")
     
     yield  # App runs here
     
-    # Shutdown cleanup (if needed)
+    # Shutdown cleanup
+    if voice_task:
+        logger.info("Cancelling Voice Input Task...")
+        voice_task.cancel()
+        try:
+            await voice_task
+        except asyncio.CancelledError:
+            pass
+
     logger.info("Shutting down EchoBot...")
 
 app = FastAPI(title="EchoBot Web UI", lifespan=lifespan)
@@ -241,19 +249,30 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 # --- Voice Loop Integration ---
-def run_voice_loop(loop):
+async def run_voice_loop():
     global voice_engine
     if not voice_engine:
         return
-    while True:
-        try:
-            if voice_engine.wait_for_wake_word():
-                 text = voice_engine.listen()
-                 if text:
-                     asyncio.run_coroutine_threadsafe(process_user_request(text), loop)
-        except Exception:
-            import time
-            time.sleep(1)
+    logger.info("Voice Input Loop Started")
+    try:
+        while True:
+            try:
+                # wait_for_wake_word blocks, run in thread
+                detected = await asyncio.to_thread(voice_engine.wait_for_wake_word)
+                if detected:
+                     # listen blocks, run in thread
+                     text = await asyncio.to_thread(voice_engine.listen)
+                     if text:
+                         # process_user_request is async, run directly
+                         await process_user_request(text)
+            except asyncio.CancelledError:
+                raise
+            except Exception as e:
+                logger.error(f"Error in voice loop: {e}")
+                # Non-blocking sleep
+                await asyncio.sleep(1)
+    except asyncio.CancelledError:
+        logger.info("Voice Input Loop Cancelled")
 
 # --- Core Processing Logic ---
 async def process_user_request(user_text: str):
