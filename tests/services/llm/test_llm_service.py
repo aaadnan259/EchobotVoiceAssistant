@@ -44,7 +44,7 @@ class TestLLMService(unittest.TestCase):
         self.mock_logger_patcher.stop()
 
     def test_google_response_success(self):
-        """Test successful response from Google Gemini."""
+        """Test successful response from Google Gemini with detailed argument verification."""
         mock_response = MagicMock()
         mock_response.text = "Hello there!"
         self.mock_client.models.generate_content.return_value = mock_response
@@ -53,7 +53,13 @@ class TestLLMService(unittest.TestCase):
         response = self.service._get_google_response(messages)
 
         self.assertEqual(response.content, "Hello there!")
-        self.mock_client.models.generate_content.assert_called_once()
+
+        # Verify call arguments
+        self.mock_client.models.generate_content.assert_called_once_with(
+            model="gemini-2.0-flash",
+            contents=[{"role": "user", "parts": [{"text": "Hi"}]}],
+            config=None
+        )
 
     def test_google_response_empty(self):
         """Test handling of empty text response from Google Gemini."""
@@ -135,6 +141,42 @@ class TestLLMService(unittest.TestCase):
         _, kwargs = self.mock_client.models.generate_content.call_args
         expected_config = {'system_instruction': "Part 1.\nPart 2."}
         self.assertEqual(kwargs['config'], expected_config)
+
+    def test_google_response_empty_messages(self):
+        """Test behavior when an empty list of messages is provided."""
+        mock_response = MagicMock()
+        mock_response.text = "I received nothing."
+        self.mock_client.models.generate_content.return_value = mock_response
+
+        messages = []
+        response = self.service._get_google_response(messages)
+
+        # Verify call arguments
+        self.mock_client.models.generate_content.assert_called_once_with(
+            model="gemini-2.0-flash",
+            contents=[],
+            config=None
+        )
+        self.assertEqual(response.content, "I received nothing.")
+
+    def test_google_response_with_tools(self):
+        """Test that passing tools (currently ignored) does not cause an exception."""
+        mock_response = MagicMock()
+        mock_response.text = "I don't use tools yet."
+        self.mock_client.models.generate_content.return_value = mock_response
+
+        messages = [{"role": "user", "content": "Do something."}]
+        tools = [{"type": "function", "function": {"name": "test_tool"}}]
+
+        response = self.service._get_google_response(messages, tools=tools)
+
+        # Verify call arguments - confirm tools are NOT passed to Gemini in current implementation
+        self.mock_client.models.generate_content.assert_called_once_with(
+            model="gemini-2.0-flash",
+            contents=[{"role": "user", "parts": [{"text": "Do something."}]}],
+            config=None
+        )
+        self.assertEqual(response.content, "I don't use tools yet.")
 
 if __name__ == '__main__':
     unittest.main()
