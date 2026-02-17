@@ -141,8 +141,8 @@ export const validateImport = (data: any): data is Conversation => {
     if (!data || typeof data !== 'object') return false;
 
     // Basic structural check for V2 format
-    const hasMessages = data.messages && typeof data.messages === 'object';
-    const hasBranches = data.branches && typeof data.branches === 'object';
+    const hasMessages = data.messages && typeof data.messages === 'object' && !Array.isArray(data.messages);
+    const hasBranches = data.branches && typeof data.branches === 'object' && !Array.isArray(data.branches);
     const hasActiveBranch = typeof data.activeBranchId === 'string';
 
     if (hasMessages && hasBranches && hasActiveBranch) return true;

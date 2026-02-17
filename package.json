@@ -80,6 +80,7 @@
       },
       "scripts": {
             "dev": "vite",
+            "test": "vitest",
             "start": "echo 'Use: python main.py' && exit 1",
             "build": "vite build",
             "test": "vitest"
