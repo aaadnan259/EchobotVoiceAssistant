@@ -1,64 +1,34 @@
 from fastapi import FastAPI, WebSocket, Request, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import json
 import asyncio
-import threading
 from contextlib import asynccontextmanager
 from typing import List, Optional, Dict, Any
 import os
 import base64
 from pydantic import BaseModel
-from google import genai  # NEW SDK
+from google import genai
 
 from config.loader import ConfigLoader
-from services.plugin_manager import PluginManager
-from services.audio.tts import TTSEngine
-from services.audio.voice_engine import VoiceEngine
 from utils.logger import logger
-from services.llm.llm_service import LLMService
 
-# Global state
-voice_engine = None
+# New modules
+from web.backend.services import plugin_manager
+from web.backend.websocket_manager import manager
+from web.backend.voice_loop import start_voice_loop, stop_voice_loop
+from web.backend.interaction import process_user_request
+from web.backend.static_utils import mount_static_files
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager for startup/shutdown."""
-    global voice_engine
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
-
-    def status_callback(status, **kwargs):
-        payload = {"status": status, **kwargs}
-        if manager.active_connections and loop:
-            asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
-
-    voice_task = None
-    if ConfigLoader.get("voice.enabled", False):
-        try:
-            voice_engine = VoiceEngine(status_callback=status_callback)
-            # Start as asyncio Task instead of thread
-            voice_task = asyncio.create_task(run_voice_loop())
-            logger.info("Voice Input Task Started")
-        except Exception as e:
-            logger.error(f"Failed to start voice engine: {e}")
+    voice_task = await start_voice_loop()
     
     yield  # App runs here
     
-    # Shutdown cleanup
-    if voice_task:
-        logger.info("Cancelling Voice Input Task...")
-        voice_task.cancel()
-        try:
-            await voice_task
-        except asyncio.CancelledError:
-            pass
-
+    await stop_voice_loop(voice_task)
     logger.info("Shutting down EchoBot...")
 
 app = FastAPI(title="EchoBot Web UI", lifespan=lifespan)
@@ -173,172 +143,8 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# --- Static Files & Template Configuration (Robust Fix) ---
-current_dir = os.path.dirname(os.path.abspath(__file__)) # web/backend
-web_dir = os.path.dirname(current_dir) # web
-project_root = os.path.dirname(web_dir) # EchoBot root
-
-logger.info(f"=== PATH DEBUG ===")
-logger.info(f"Current Directory: {current_dir}")
-logger.info(f"Project Root: {project_root}")
-
-# Determine Dist Directory
-possible_dist_dirs = [
-    os.path.join(project_root, "build"),
-    os.path.join(project_root, "dist"),
-    "/app/build",  # Docker absolute path fallback
-    "/app/dist"
-]
-
-dist_dir = None
-for path in possible_dist_dirs:
-    if os.path.exists(path) and os.path.isdir(path):
-        dist_dir = path
-        logger.info(f"Found dist directory at: {dist_dir}")
-        break
-
-if dist_dir:
-    # Check for index.html
-    index_path = os.path.join(dist_dir, "index.html")
-    if os.path.exists(index_path):
-        logger.info(f"Found index.html at: {index_path}")
-    else:
-        logger.warning(f"Dist dir exists but index.html NOT found at: {index_path}")
-
-    # Mount assets
-    assets_dir = os.path.join(dist_dir, "assets")
-    if os.path.exists(assets_dir):
-         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
-
-
-else:
-    logger.warning("No build/dist directory found! Falling back to dev mode/templates.")
-    # Fallback/Dev
-    static_dir = os.path.join(web_dir, "static")
-    if os.path.exists(static_dir):
-        app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-    templates_dir = os.path.join(web_dir, "templates")
-    if os.path.exists(templates_dir):
-        templates = Jinja2Templates(directory=templates_dir)
-
-# Global Managers
-plugin_manager = PluginManager()
-plugin_manager.load_plugins()
-
-# Initialize AI Services
-llm_service = LLMService()
-tts_engine = TTSEngine()
-voice_engine = None
-
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
-
-manager = ConnectionManager()
-
-# --- Voice Loop Integration ---
-async def run_voice_loop():
-    global voice_engine
-    if not voice_engine:
-        return
-    logger.info("Voice Input Loop Started")
-    try:
-        while True:
-            try:
-                # wait_for_wake_word blocks, run in thread
-                detected = await asyncio.to_thread(voice_engine.wait_for_wake_word)
-                if detected:
-                     # listen blocks, run in thread
-                     text = await asyncio.to_thread(voice_engine.listen)
-                     if text:
-                         # process_user_request is async, run directly
-                         await process_user_request(text)
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                logger.error(f"Error in voice loop: {e}")
-                # Non-blocking sleep
-                await asyncio.sleep(1)
-    except asyncio.CancelledError:
-        logger.info("Voice Input Loop Cancelled")
-
-# --- Core Processing Logic ---
-async def process_user_request(user_text: str):
-    logger.info(f"=== PROCESSING REQUEST: {user_text} ===")
-    
-    # 1. Prepare Context (RAG)
-    memory_context = ""
-    if llm_service.memory_service:
-        try:
-             relevant_memories = await asyncio.to_thread(llm_service.memory_service.query, user_text)
-             if relevant_memories:
-                 memory_context = f"\n\nRelevant Past Memories:\n{relevant_memories}"
-        except Exception as e:
-            logger.error(f"Memory Retrieval Error: {e}")
-
-    # 2. Construct Messages
-    # Note: LLMService is now using new SDK but get_response signature handles formatting
-    messages = [
-        {"role": "system", "content": f"You are EchoBot, a helpful and witty AI assistant.{memory_context}"},
-        {"role": "user", "content": user_text}
-    ]
-    
-    tools = plugin_manager.get_tool_definitions()
-    
-    response_message = await asyncio.to_thread(llm_service.get_response, messages, tools=tools)
-    
-    if isinstance(response_message, str):
-        await manager.broadcast(json.dumps({"type": "error", "text": response_message}))
-        return
-
-    response_text = getattr(response_message, 'content', "")
-
-    # Proceed with text response
-
-
-    if not response_text:
-        response_text = "I'm sorry, I couldn't generate a response."
-
-    # Memory
-    if llm_service.memory_service:
-        try:
-            full_exchange = f"User: {user_text}\nAssistant: {response_text}"
-            llm_service.memory_service.add(full_exchange)
-        except Exception:
-            pass
-    
-    # Response
-    audio_b64 = None
-    if tts_engine and tts_engine.is_available:
-        try:
-             await manager.broadcast(json.dumps({"status": "speaking"}))
-             audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, response_text)
-             if audio_bytes:
-                 audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-        except Exception:
-             pass
-
-    payload = {
-            "type": "audio",
-            "text": response_text,
-            "audio": audio_b64
-    }
-    await manager.broadcast(json.dumps(payload))
-    if not audio_b64:
-        await manager.broadcast(json.dumps({"status": "idle"}))
-
+# --- Static Files & Template Configuration ---
+dist_dir, templates = mount_static_files(app)
 
 # --- Routes ---
 @app.get("/")
@@ -347,7 +153,7 @@ async def serve_spa_root(request: Request):
         index_file = os.path.join(dist_dir, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)
-    if 'templates' in globals():
+    if templates:
          return templates.TemplateResponse(request=request, name="index.html")
     return {"error": "Frontend build not found."}
 
@@ -378,7 +184,7 @@ async def serve_spa_catchall(full_path: str, request: Request):
         index_file = os.path.join(dist_dir, "index.html")
         if os.path.exists(index_file):
             return FileResponse(index_file)
-    if 'templates' in globals():
+    if templates:
          return templates.TemplateResponse(request=request, name="index.html")
     return {"error": "Spa route not found"}
 
