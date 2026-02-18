@@ -24,6 +24,35 @@ from services.llm.llm_service import LLMService
 # Global state
 voice_engine = None
 
+async def send_notification(text: str):
+    logger.info(f"Sending notification: {text}")
+
+    # Broadcast text message so it appears in chat
+    if manager:
+        await manager.broadcast(json.dumps({
+            "type": "text",
+            "text": text,
+            "role": "assistant"
+        }))
+
+    # Generate and broadcast audio
+    audio_b64 = None
+    if tts_engine and tts_engine.is_available:
+        try:
+             audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, text)
+             if audio_bytes:
+                 audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+        except Exception as e:
+             logger.error(f"TTS Error in notification: {e}")
+
+    if audio_b64 and manager:
+        payload = {
+                "type": "audio",
+                "text": text,
+                "audio": audio_b64
+        }
+        await manager.broadcast(json.dumps(payload))
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager for startup/shutdown."""
@@ -37,6 +66,14 @@ async def lifespan(app: FastAPI):
         payload = {"status": status, **kwargs}
         if manager.active_connections and loop:
             asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
+
+    # Notification Callback for Plugins
+    def notification_sync_callback(text: str):
+        if loop:
+            asyncio.run_coroutine_threadsafe(send_notification(text), loop)
+
+    if plugin_manager:
+        plugin_manager.set_notification_callback(notification_sync_callback)
 
     voice_task = None
     if ConfigLoader.get("voice.enabled", False):

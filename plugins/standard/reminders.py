@@ -16,6 +16,7 @@ class ReminderPlugin(Plugin):
 
     def __init__(self):
         super().__init__()
+        self.notification_callback = None
         self.db_path = ConfigLoader.get("storage.db_path", "storage/db/echobot.db")
         
         # Ensure DB directory exists
@@ -74,8 +75,12 @@ class ReminderPlugin(Plugin):
         conn.execute("UPDATE reminders SET triggered = 1 WHERE id = ?", (r_id,))
         conn.commit()
         conn.close()
-        # TODO: Callback to main system to speak/notify
-        # For now, we just log it. The main loop or UI should poll or subscribe.
+
+        if self.notification_callback:
+            self.notification_callback(f"Reminder: {task}")
+
+    def set_notification_callback(self, callback):
+        self.notification_callback = callback
 
     def handle(self, intent: str, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
         if intent == "reminder_set":

@@ -17,12 +17,23 @@ class Plugin:
         """Process the user request."""
         raise NotImplementedError("Plugins must implement handle()")
 
+    def set_notification_callback(self, callback):
+        """Register a callback for notifications."""
+        pass
+
 class PluginManager:
     """Manages the discovery, loading, and execution of plugins."""
     
     def __init__(self):
         self.plugins: Dict[str, Plugin] = {}
         self.intent_map: Dict[str, Plugin] = {}
+        self.notification_callback = None
+
+    def set_notification_callback(self, callback):
+        """Set a notification callback for all plugins."""
+        self.notification_callback = callback
+        for plugin in self.plugins.values():
+            plugin.set_notification_callback(callback)
 
     def load_plugins(self, plugin_dir: str = "plugins"):
         """Dynamically load plugins from the specified directory."""
@@ -63,6 +74,10 @@ class PluginManager:
         """Register a plugin class."""
         try:
             plugin_instance = plugin_class()
+
+            if self.notification_callback:
+                plugin_instance.set_notification_callback(self.notification_callback)
+
             self.plugins[plugin_instance.name] = plugin_instance
             
             for intent in plugin_instance.intents:
