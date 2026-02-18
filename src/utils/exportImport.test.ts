@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateImport } from './exportImport';
+import { validateImport, generateJSON } from './exportImport';
+import { Conversation } from '../types';
 
 describe('validateImport', () => {
   it('should return true for a valid V2 conversation object', () => {
@@ -107,5 +108,82 @@ describe('validateImport', () => {
 
   it('should return false for empty object', () => {
     expect(validateImport({})).toBe(false);
+  });
+});
+
+describe('generateJSON', () => {
+  const sampleConversation: Conversation = {
+    id: 'conv-1',
+    branches: {
+      'branch-1': { id: 'branch-1', name: 'Main', createdAt: 100, parentMessageId: null }
+    },
+    activeBranchId: 'branch-1',
+    messages: {
+      'msg-1': {
+        id: 'msg-1',
+        role: 'user',
+        text: 'Hello',
+        timestamp: 100,
+        image: 'data:image/png;base64,dummy'
+      },
+      'msg-2': {
+        id: 'msg-2',
+        role: 'model',
+        text: 'Hi there',
+        timestamp: 101,
+        // No image
+      },
+      'msg-3': {
+        id: 'msg-3',
+        role: 'user',
+        text: 'Look at this',
+        timestamp: 102,
+        image: 'data:image/jpeg;base64,anotherdummy'
+      }
+    }
+  };
+
+  it('should include images by default', () => {
+    const json = generateJSON(sampleConversation);
+    const parsed = JSON.parse(json);
+    expect(parsed.messages['msg-1'].image).toBeDefined();
+    expect(parsed.messages['msg-3'].image).toBeDefined();
+    expect(parsed.messages['msg-1'].image).toBe('data:image/png;base64,dummy');
+  });
+
+  it('should include images when includeImages is true', () => {
+    const json = generateJSON(sampleConversation, { includeImages: true });
+    const parsed = JSON.parse(json);
+    expect(parsed.messages['msg-1'].image).toBeDefined();
+    expect(parsed.messages['msg-3'].image).toBeDefined();
+  });
+
+  it('should exclude images when includeImages is false', () => {
+    const json = generateJSON(sampleConversation, { includeImages: false });
+    const parsed = JSON.parse(json);
+    expect(parsed.messages['msg-1'].image).toBeUndefined();
+    expect(parsed.messages['msg-3'].image).toBeUndefined();
+    // Verify other fields remain
+    expect(parsed.messages['msg-1'].text).toBe('Hello');
+    expect(parsed.messages['msg-3'].text).toBe('Look at this');
+  });
+
+  it('should not mutate the original conversation object', () => {
+    generateJSON(sampleConversation, { includeImages: false });
+    expect(sampleConversation.messages['msg-1'].image).toBeDefined();
+    expect(sampleConversation.messages['msg-3'].image).toBeDefined();
+  });
+
+  it('should handle conversations without images gracefully when excluding images', () => {
+    const noImageConv: Conversation = {
+        ...sampleConversation,
+        messages: {
+            'msg-1': { id: 'msg-1', role: 'user', text: 'Hello', timestamp: 100 }
+        }
+    };
+    const json = generateJSON(noImageConv, { includeImages: false });
+    const parsed = JSON.parse(json);
+    expect(parsed.messages['msg-1'].image).toBeUndefined();
+    expect(parsed.messages['msg-1'].text).toBe('Hello');
   });
 });
