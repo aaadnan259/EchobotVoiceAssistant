@@ -12,6 +12,11 @@ class Plugin:
 
     def __init__(self, config: Dict[str, Any] = None):
         self.config = config or {}
+        self.callback = None
+
+    def set_callback(self, callback):
+        """Set a callback function for the plugin to notify the main system."""
+        self.callback = callback
 
     def handle(self, intent: str, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Process the user request."""
@@ -23,6 +28,14 @@ class PluginManager:
     def __init__(self):
         self.plugins: Dict[str, Plugin] = {}
         self.intent_map: Dict[str, Plugin] = {}
+        self.callback = None
+
+    def set_plugin_callback(self, callback):
+        """Set a global callback for all plugins."""
+        self.callback = callback
+        for plugin in self.plugins.values():
+            if hasattr(plugin, 'set_callback'):
+                plugin.set_callback(callback)
 
     def load_plugins(self, plugin_dir: str = "plugins"):
         """Dynamically load plugins from the specified directory."""
@@ -63,6 +76,9 @@ class PluginManager:
         """Register a plugin class."""
         try:
             plugin_instance = plugin_class()
+            if self.callback and hasattr(plugin_instance, 'set_callback'):
+                plugin_instance.set_callback(self.callback)
+
             self.plugins[plugin_instance.name] = plugin_instance
             
             for intent in plugin_instance.intents:

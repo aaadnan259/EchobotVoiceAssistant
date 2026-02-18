@@ -74,8 +74,10 @@ class ReminderPlugin(Plugin):
         conn.execute("UPDATE reminders SET triggered = 1 WHERE id = ?", (r_id,))
         conn.commit()
         conn.close()
-        # TODO: Callback to main system to speak/notify
-        # For now, we just log it. The main loop or UI should poll or subscribe.
+
+        # Callback to main system to speak/notify
+        if self.callback:
+            self.callback("notification", {"text": f"Reminder: {task}"})
 
     def handle(self, intent: str, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
         if intent == "reminder_set":
