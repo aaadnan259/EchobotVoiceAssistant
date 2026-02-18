@@ -48,6 +48,14 @@ async def lifespan(app: FastAPI):
         if manager.active_connections and loop:
             asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
 
+    def plugin_callback_wrapper(event_type, data):
+        if event_type == "notification" and loop:
+            text = data.get("text")
+            if text:
+                asyncio.run_coroutine_threadsafe(handle_plugin_notification(text), loop)
+
+    plugin_manager.set_plugin_callback(plugin_callback_wrapper)
+
     voice_task = None
     if ConfigLoader.get("voice.enabled", False):
         try:
@@ -264,6 +272,36 @@ class ConnectionManager:
             await connection.send_text(message)
 
 manager = ConnectionManager()
+
+# --- Plugin Notification Handler ---
+async def handle_plugin_notification(text: str):
+    """Handle notifications from plugins (e.g., reminders)."""
+    logger.info(f"PLUGIN NOTIFICATION: {text}")
+
+    # Broadcast to frontend
+    payload = {
+        "type": "notification",
+        "text": text,
+        "level": "info"
+    }
+    await manager.broadcast(json.dumps(payload))
+
+    # Speak if TTS is available
+    if tts_engine and tts_engine.is_available:
+        try:
+            # Announce it
+            await manager.broadcast(json.dumps({"status": "speaking"}))
+            audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, text)
+            if audio_bytes:
+                audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                await manager.broadcast(json.dumps({
+                    "type": "audio",
+                    "text": text,
+                    "audio": audio_b64
+                }))
+            await manager.broadcast(json.dumps({"status": "idle"}))
+        except Exception as e:
+            logger.error(f"TTS Error in notification: {e}")
 
 # --- Voice Loop Integration ---
 async def run_voice_loop():
