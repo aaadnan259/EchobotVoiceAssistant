@@ -6,6 +6,9 @@ import sys
 sys.modules['google'] = MagicMock()
 sys.modules['google.genai'] = MagicMock()
 sys.modules['openai'] = MagicMock()
+sys.modules['yaml'] = MagicMock()
+sys.modules['dotenv'] = MagicMock()
+sys.modules['colorama'] = MagicMock()
 
 from services.llm.llm_service import LLMService
 
