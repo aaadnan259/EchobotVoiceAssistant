@@ -1,4 +1,5 @@
 import requests
+import asyncio
 from typing import Dict, Any
 from services.plugin_manager import Plugin
 from config.loader import ConfigLoader
@@ -14,14 +15,14 @@ class WeatherPlugin(Plugin):
         self.api_key = ConfigLoader.get("plugins.openweather_api_key")
         self.base_url = "http://api.openweathermap.org/data/2.5/weather"
 
-    def handle(self, intent: str, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
+    async def handle(self, intent: str, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
         location = entities.get("location") or ConfigLoader.get("voice.default_location", "New York")
-        return self.get_weather(location)
+        return await self.get_weather(location)
 
-    def get_weather(self, location: str) -> str:
+    async def get_weather(self, location: str) -> str:
         if not self.api_key:
             logger.warning("OpenWeather API key missing. Falling back to wttr.in.")
-            return self.get_weather_fallback(location)
+            return await self.get_weather_fallback(location)
 
         try:
             # 1. Geocoding API to get Lat/Lon
@@ -32,7 +33,7 @@ class WeatherPlugin(Plugin):
                 "appid": self.api_key
             }
             logger.info(f"Geocoding location: {location}")
-            geo_response = requests.get(geo_url, params=geo_params, timeout=5)
+            geo_response = await asyncio.to_thread(requests.get, geo_url, params=geo_params, timeout=5)
             geo_response.raise_for_status()
             geo_data = geo_response.json()
 
@@ -54,7 +55,7 @@ class WeatherPlugin(Plugin):
             }
             
             logger.info(f"Fetching One Call weather for: {city_name} ({lat}, {lon})")
-            response = requests.get(onecall_url, params=weather_params, timeout=5)
+            response = await asyncio.to_thread(requests.get, onecall_url, params=weather_params, timeout=5)
             
             # Handle 401 specifically for subscription issues
             if response.status_code == 401:
@@ -88,17 +89,17 @@ class WeatherPlugin(Plugin):
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Weather API error: {e}")
-            return self.get_weather_fallback(location)
+            return await self.get_weather_fallback(location)
         except (KeyError, ValueError, IndexError) as e:
             logger.error(f"Weather data parsing error: {e}")
             return f"Sorry, I couldn't process the weather data for {location}."
 
-    def get_weather_fallback(self, location: str) -> str:
+    async def get_weather_fallback(self, location: str) -> str:
         """Fallback using wttr.in (no API key required)."""
         try:
             # format=3 returns "Location: Condition Temp"
             url = f"https://wttr.in/{location}?format=3"
-            response = requests.get(url, timeout=5)
+            response = await asyncio.to_thread(requests.get, url, timeout=5)
             response.raise_for_status()
             return f"Current weather: {response.text.strip()}"
         except Exception as e:
