@@ -1,6 +1,7 @@
 import os
 import importlib
 import inspect
+import asyncio
 from typing import Dict, List, Any, Optional
 from utils.logger import logger
 
@@ -18,7 +19,7 @@ class Plugin:
         """Set a callback function for the plugin to notify the main system."""
         self.callback = callback
 
-    def handle(self, intent: str, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
+    async def handle(self, intent: str, entities: Dict[str, Any], context: Dict[str, Any]) -> str:
         """Process the user request."""
         raise NotImplementedError("Plugins must implement handle()")
 
@@ -162,25 +163,32 @@ class PluginManager:
         
         return tools
 
-    def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
+    async def execute_tool(self, tool_name: str, arguments: Dict[str, Any]) -> str:
         """Execute a tool by name with arguments."""
         try:
+            result = None
             if tool_name == "get_weather":
                 plugin = self.plugins.get("Weather")
                 if plugin:
-                    return plugin.get_weather(arguments.get("location"))
+                    result = plugin.get_weather(arguments.get("location"))
             
             elif tool_name == "search_wikipedia":
                 plugin = self.plugins.get("Wikipedia")
                 if plugin:
-                    return plugin.search(arguments.get("query"))
+                    result = plugin.search(arguments.get("query"))
             
             elif tool_name == "web_search":
                 plugin = self.plugins.get("WebSearch")
                 if plugin:
-                    return plugin.search(arguments.get("query"))
+                    result = plugin.search(arguments.get("query"))
             
-            return f"Tool {tool_name} not found or plugin not loaded."
+            if result is None:
+                return f"Tool {tool_name} not found or plugin not loaded."
+
+            if inspect.iscoroutine(result):
+                return await result
+            return result
+
         except Exception as e:
             logger.error(f"Error executing tool {tool_name}: {e}")
             return f"Error executing tool {tool_name}: {e}"
