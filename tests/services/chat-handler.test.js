@@ -94,6 +94,59 @@ describe('ChatHandler', () => {
             expect(global.fetch).toHaveBeenCalledTimes(2);
         });
 
+        it('should succeed on the final retry attempt', async () => {
+            // First two attempts fail
+            global.fetch.mockRejectedValueOnce(new Error('Network error 1'))
+                .mockRejectedValueOnce(new Error('Network error 2'));
+
+            // Third attempt succeeds
+            const mockResponse = { response: 'Success on final try', timestamp: 456 };
+            global.fetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => mockResponse
+            });
+
+            const promise = chatHandler.sendMessage('Hello');
+
+            await vi.runAllTimersAsync();
+
+            const result = await promise;
+
+            expect(result.success).toBe(true);
+            expect(result.response).toBe('Success on final try');
+            expect(global.fetch).toHaveBeenCalledTimes(3);
+        });
+
+        it('should wait with increasing delay between retries', async () => {
+            global.fetch.mockRejectedValue(new Error('Network error'));
+
+            const promise = chatHandler.sendMessage('Hello');
+
+            // Initially called once
+            expect(global.fetch).toHaveBeenCalledTimes(1);
+
+            // Advance time by 999ms (less than first delay of 1000ms)
+            await vi.advanceTimersByTimeAsync(999);
+            expect(global.fetch).toHaveBeenCalledTimes(1);
+
+            // Advance time to 1000ms
+            await vi.advanceTimersByTimeAsync(1);
+            expect(global.fetch).toHaveBeenCalledTimes(2);
+
+            // Advance time by 1999ms (less than second delay of 2000ms)
+            await vi.advanceTimersByTimeAsync(1999);
+            expect(global.fetch).toHaveBeenCalledTimes(2);
+
+            // Advance time to 2000ms
+            await vi.advanceTimersByTimeAsync(1);
+            expect(global.fetch).toHaveBeenCalledTimes(3);
+
+            // Resolve the remaining promise
+            await vi.runAllTimersAsync();
+            const result = await promise;
+            expect(result.success).toBe(false);
+        });
+
         it('should fail after max retry attempts', async () => {
             // All attempts fail
             global.fetch.mockRejectedValue(new Error('Network error'));
