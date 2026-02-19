@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { sanitizeRichText, sanitizeUrl } from './sanitize';
+import { sanitizeRichText, sanitizeUrl, sanitizeImageDataUri } from './sanitize';
 
 describe('sanitizeRichText', () => {
     it('should return empty string for null/undefined/non-string input', () => {
@@ -131,10 +131,10 @@ describe('sanitizeUrl', () => {
     });
 
     it('should return empty string for unknown protocols with ://', () => {
-         // 'ftp://example.com' - ftp is not in safeProtocols.
-         // trimmed includes '://'.
-         // So it returns ''.
-         expect(sanitizeUrl('ftp://example.com')).toBe('');
+        // 'ftp://example.com' - ftp is not in safeProtocols.
+        // trimmed includes '://'.
+        // So it returns ''.
+        expect(sanitizeUrl('ftp://example.com')).toBe('');
     });
 
     it('should be robust against bypass attempts', () => {
@@ -145,5 +145,79 @@ describe('sanitizeUrl', () => {
         // No :// match.
         // Returns https://javascript :alert(1). Safe.
         expect(sanitizeUrl('javascript :alert(1)')).toBe('https://javascript :alert(1)');
+    });
+});
+
+describe('sanitizeImageDataUri', () => {
+    it('should validate valid PNG data URI', () => {
+        const validPng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+        expect(sanitizeImageDataUri(validPng)).toBe(validPng);
+    });
+
+    it('should validate valid JPEG data URI', () => {
+        const validJpeg = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=';
+        expect(sanitizeImageDataUri(validJpeg)).toBe(validJpeg);
+    });
+
+    it('should validate valid GIF data URI', () => {
+        const validGif = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        expect(sanitizeImageDataUri(validGif)).toBe(validGif);
+    });
+
+    it('should validate valid WEBP data URI', () => {
+        const validWebp = 'data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==';
+        expect(sanitizeImageDataUri(validWebp)).toBe(validWebp);
+    });
+
+    it('should validate valid SVG data URI', () => {
+        const validSvg = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjwvc3ZnPg==';
+        expect(sanitizeImageDataUri(validSvg)).toBe(validSvg);
+    });
+
+    it('should return null for null/undefined/empty input', () => {
+        expect(sanitizeImageDataUri(null as any)).toBeNull();
+        expect(sanitizeImageDataUri(undefined as any)).toBeNull();
+        expect(sanitizeImageDataUri('')).toBeNull();
+    });
+
+    it('should return null for non-string input', () => {
+        expect(sanitizeImageDataUri(123 as any)).toBeNull();
+        expect(sanitizeImageDataUri({} as any)).toBeNull();
+    });
+
+    it('should return null for invalid MIME type', () => {
+        const invalidMime = 'data:text/plain;base64,SGVsbG8gV29ybGQ=';
+        expect(sanitizeImageDataUri(invalidMime)).toBeNull();
+    });
+
+    it('should return null for string not starting with data:image/', () => {
+        const invalidStart = 'https://example.com/image.png';
+        expect(sanitizeImageDataUri(invalidStart)).toBeNull();
+    });
+
+    it('should accept lenient base64 if it starts with data:image/', () => {
+        // The regex checks for strict base64, but the fallback allows any content as long as it starts with data:image/
+        // and passes the size check.
+        // This test verifies the fallback behavior.
+        const lenient = 'data:image/png;base64,not-strictly-valid-base64-but-accepted-by-lenient-check';
+        expect(sanitizeImageDataUri(lenient)).toBe(lenient);
+    });
+
+    it('should enforce size limit (10MB)', () => {
+        const maxSize = 10 * 1024 * 1024;
+
+        // Create a string slightly larger than 10MB
+        // "data:image/png;base64," is 22 chars.
+        // We need 10MB + 1 byte total length.
+        const header = 'data:image/png;base64,';
+        const largePayload = 'a'.repeat(maxSize - header.length + 1);
+        const tooLarge = header + largePayload;
+
+        expect(sanitizeImageDataUri(tooLarge)).toBeNull();
+
+        // Create a string slightly smaller than 10MB
+        const safePayload = 'a'.repeat(maxSize - header.length - 1);
+        const safe = header + safePayload;
+        expect(sanitizeImageDataUri(safe)).toBe(safe);
     });
 });
