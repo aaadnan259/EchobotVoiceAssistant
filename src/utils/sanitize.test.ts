@@ -1,6 +1,50 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest';
-import { sanitizeRichText, sanitizeUrl, sanitizeImageDataUri } from './sanitize';
+import { sanitizeRichText, sanitizeUrl, sanitizeImageDataUri, sanitizeText } from './sanitize';
+
+describe('sanitizeText', () => {
+    it('should return empty string for null/undefined/non-string input', () => {
+        expect(sanitizeText(null as any)).toBe('');
+        expect(sanitizeText(undefined as any)).toBe('');
+        expect(sanitizeText(123 as any)).toBe('');
+    });
+
+    it('should strip all HTML tags', () => {
+        const input = '<p>Paragraph</p><b>Bold</b>';
+        expect(sanitizeText(input)).toBe('ParagraphBold');
+    });
+
+    it('should handle nested tags', () => {
+        const input = '<div><p>Nested</p></div>';
+        expect(sanitizeText(input)).toBe('Nested');
+    });
+
+    it('should strip attributes', () => {
+        const input = '<a href="https://example.com" class="link">Link</a>';
+        expect(sanitizeText(input)).toBe('Link');
+    });
+
+    it('should strip script tags and their content', () => {
+        const input = '<script>alert("xss")</script>';
+        expect(sanitizeText(input)).toBe('');
+    });
+
+    it('should handle malformed HTML', () => {
+        const input = '<p>Text';
+        expect(sanitizeText(input)).toBe('Text');
+    });
+
+    it('should preserve plain text', () => {
+        const input = 'Just plain text';
+        expect(sanitizeText(input)).toBe('Just plain text');
+    });
+
+    it('should handle HTML entities', () => {
+        const input = '&lt;p&gt;Text&lt;/p&gt;';
+        // Entities representing tags should be treated as text and preserved
+        expect(sanitizeText(input)).toBe(input);
+    });
+});
 
 describe('sanitizeRichText', () => {
     it('should return empty string for null/undefined/non-string input', () => {
