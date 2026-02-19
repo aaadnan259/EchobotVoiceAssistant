@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ChatHandler } from '../../src/services/chat-handler';
+import { ChatHandler } from '../../scripts/chat-handler';
 
 // Mock global fetch
 global.fetch = vi.fn();

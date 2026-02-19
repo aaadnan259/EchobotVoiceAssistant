@@ -1,4 +1,4 @@
-import chatHandler from './src/services/chat-handler.js';
+import chatHandler from './chat-handler.js';
 
 async function runTests() {
     try {
