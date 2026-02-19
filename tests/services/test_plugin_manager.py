@@ -10,15 +10,24 @@ sys.modules["utils.logger"] = mock_logger
 
 from services.plugin_manager import PluginManager
 
-class TestPluginManager(unittest.TestCase):
+class TestPluginManager(unittest.IsolatedAsyncioTestCase):
 
     def setUp(self):
         """Set up test fixtures."""
         self.plugin_manager = PluginManager()
-        # Initialize plugins as empty dictionary (from existing tests)
+        # Initialize plugins as empty dictionary
         self.plugin_manager.plugins = {}
-        # Mock the internal method to isolate testing load_plugins (from new tests)
+        # Mock the internal method to isolate testing load_plugins
         self.plugin_manager._load_plugin_from_file = MagicMock()
+
+        # Setup mock plugins for execute_tool tests
+        self.mock_weather_plugin = MagicMock()
+        self.mock_wikipedia_plugin = MagicMock()
+        self.mock_web_search_plugin = MagicMock()
+
+        self.mock_weather_plugin.get_weather.return_value = "Sunny, 25C"
+        self.mock_wikipedia_plugin.search.return_value = "Python is a programming language."
+        self.mock_web_search_plugin.search.return_value = "Latest news: AI is booming."
 
     def test_get_tool_definitions_empty(self):
         """Test get_tool_definitions returns empty list when no plugins are loaded."""
@@ -123,9 +132,47 @@ class TestPluginManager(unittest.TestCase):
 
         self.plugin_manager.load_plugins("plugins")
 
-        # We can't easily assert the log message on the module-level mock from here cleanly without refactoring
-        # but we can verify the behavior that no plugins were loaded
+        # Verify no plugins loaded
         self.plugin_manager._load_plugin_from_file.assert_not_called()
+
+    # --- execute_tool tests ---
+
+    async def test_execute_tool_get_weather(self):
+        self.plugin_manager.plugins["Weather"] = self.mock_weather_plugin
+        result = await self.plugin_manager.execute_tool("get_weather", {"location": "London"})
+        self.mock_weather_plugin.get_weather.assert_called_with("London")
+        self.assertEqual(result, "Sunny, 25C")
+
+    async def test_execute_tool_search_wikipedia(self):
+        self.plugin_manager.plugins["Wikipedia"] = self.mock_wikipedia_plugin
+        result = await self.plugin_manager.execute_tool("search_wikipedia", {"query": "Python"})
+        self.mock_wikipedia_plugin.search.assert_called_with("Python")
+        self.assertEqual(result, "Python is a programming language.")
+
+    async def test_execute_tool_web_search(self):
+        self.plugin_manager.plugins["WebSearch"] = self.mock_web_search_plugin
+        result = await self.plugin_manager.execute_tool("web_search", {"query": "AI news"})
+        self.mock_web_search_plugin.search.assert_called_with("AI news")
+        self.assertEqual(result, "Latest news: AI is booming.")
+
+    async def test_execute_tool_unknown_tool(self):
+        result = await self.plugin_manager.execute_tool("unknown_tool", {})
+        self.assertIn("Tool unknown_tool not found or plugin not loaded", result)
+
+    async def test_execute_tool_plugin_not_loaded(self):
+        # Weather plugin is not in self.plugin_manager.plugins
+        result = await self.plugin_manager.execute_tool("get_weather", {"location": "London"})
+        self.assertIn("Tool get_weather not found or plugin not loaded", result)
+
+    async def test_execute_tool_exception(self):
+        self.plugin_manager.plugins["Weather"] = self.mock_weather_plugin
+        self.mock_weather_plugin.get_weather.side_effect = Exception("API Error")
+
+        result = await self.plugin_manager.execute_tool("get_weather", {"location": "London"})
+        self.assertIn("Error executing tool get_weather: API Error", result)
+
+        # Verify logger error was called
+        mock_logger.logger.error.assert_called()
 
 if __name__ == '__main__':
     unittest.main()
