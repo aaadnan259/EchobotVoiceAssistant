@@ -1,0 +1,105 @@
+from fastapi import FastAPI, WebSocket, Request, HTTPException
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+import json
+import asyncio
+from contextlib import asynccontextmanager
+from typing import List, Optional, Dict, Any
+import os
+import base64
+from pydantic import BaseModel
+from google import genai
+
+from config.loader import ConfigLoader
+from utils.logger import logger
+
+# New modules
+from web.backend.services import plugin_manager
+from web.backend.services.orchestrator import handle_plugin_notification
+from web.backend.websocket_manager import manager
+from web.backend.voice_loop import start_voice_loop, stop_voice_loop
+from web.backend.interaction import process_user_request
+from web.backend.static_utils import mount_static_files
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """FastAPI lifespan context manager for startup/shutdown."""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
+    # Notification Callback for Plugins (Re-integrated from HEAD)
+    def plugin_callback_wrapper(event_type, data):
+        if event_type == "notification" and loop:
+            text = data.get("text")
+            if text:
+                asyncio.run_coroutine_threadsafe(handle_plugin_notification(text), loop)
+
+    plugin_manager.set_plugin_callback(plugin_callback_wrapper)
+
+    # Voice Loop (Feature Branch abstraction)
+    voice_task = await start_voice_loop()
+    
+    yield  # App runs here
+    
+    await stop_voice_loop(voice_task)
+    logger.info("Shutting down EchoBot...")
+
+app = FastAPI(title="EchoBot Web UI", lifespan=lifespan)
+
+# Import Routers
+from web.backend.routers import chat, settings, websocket
+app.include_router(chat.router)
+app.include_router(settings.router)
+# websocket router might be separate or inline? 
+# The feature branch doesn't show router imports in the snippet, 
+# but I should assume they exist if it's a refactor.
+# Wait, looking at the file list from find_by_name: routers\chat.py, routers\settings.py, routers\websocket.py
+# I should include them.
+
+app.include_router(websocket.router)
+
+
+# CORS - Restrict to known origins
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:8000",
+    os.getenv("FRONTEND_URL", ""),
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o for o in ALLOWED_ORIGINS if o],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+)
+
+# --- Static Files & Template Configuration ---
+dist_dir, templates = mount_static_files(app)
+
+# --- Routes ---
+# Catch-all for SPA
+@app.get("/{full_path:path}")
+async def serve_spa_catchall(full_path: str, request: Request):
+    if full_path.startswith("api/") or full_path.startswith("assets/") or full_path.startswith("static/"):
+        raise HTTPException(status_code=404, detail="Not Found")
+    if dist_dir:
+        index_file = os.path.join(dist_dir, "index.html")
+        if os.path.exists(index_file):
+            return FileResponse(index_file)
+    if templates:
+         return templates.TemplateResponse(request=request, name="index.html")
+    return {"error": "Spa route not found"}
+
+def run_web_server():
+    host = ConfigLoader.get("web.host", "0.0.0.0")
+    port = ConfigLoader.get("web.port", 8000)
+    logger.info(f"Starting Web Server on {host}:{port}")
+    uvicorn.run(app, host=host, port=port)
+
+if __name__ == "__main__":
+    run_web_server()

@@ -1,0 +1,31 @@
+
+> echobot-voice-assistant-ui@0.1.0 build
+> vite build
+
+NODE_ENV=production is not supported in the .env file. Only NODE_ENV=development is supported to create a development build of your project. If you need to set process.env.NODE_ENV, you can set it in the Vite config instead.
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 2109 modules transformed.
+Γ£ù Build failed in 6.21s
+error during build:
+[vite-plugin-pwa:build] There was an error during the build:
+  src/components/VirtualizedMessageList.tsx (6:7): "default" is not exported by "node_modules/react-virtualized-auto-sizer/dist/react-virtualized-auto-sizer.js", imported by "src/components/VirtualizedMessageList.tsx".
+Additionally, handling the error in the 'buildEnd' hook caused the following error:
+  src/components/VirtualizedMessageList.tsx (6:7): "default" is not exported by "node_modules/react-virtualized-auto-sizer/dist/react-virtualized-auto-sizer.js", imported by "src/components/VirtualizedMessageList.tsx".
+file: C:/Users/aaadn/Downloads/Projects/EchoBot/src/components/VirtualizedMessageList.tsx:6:7
+
+4: import { VariableSizeList as List } from 'react-window';
+5: 
+6: import AutoSizer from 'react-virtualized-auto-sizer';
+          ^
+7: 
+8: import { Message } from '../types';
+
+    at getRollupError (file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/rollup/dist/es/shared/parseAst.js:401:41)
+    at file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/rollup/dist/es/shared/node-entry.js:23347:39
+    at async catchUnfinishedHookActions (file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/rollup/dist/es/shared/node-entry.js:22805:16)
+    at async rollupInternal (file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/rollup/dist/es/shared/node-entry.js:23330:5)
+    at async buildEnvironment (file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/vite/dist/node/chunks/config.js:33541:12)
+    at async Object.build (file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/vite/dist/node/chunks/config.js:33900:19)
+    at async Object.buildApp (file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/vite/dist/node/chunks/config.js:33897:153)
+    at async CAC.<anonymous> (file:///C:/Users/aaadn/Downloads/Projects/EchoBot/node_modules/vite/dist/node/cli.js:629:3)

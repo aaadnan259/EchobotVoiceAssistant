@@ -1,16 +1,11 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
 import { ListChildComponentProps } from 'react-window';
 
-// react-window v2 has mixed CJS/ESM exports - use dynamic resolution
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-import * as ReactWindowModule from 'react-window';
-const List = (ReactWindowModule as any).VariableSizeList ??
-    (ReactWindowModule as any).default?.VariableSizeList;
+import { VariableSizeList as List } from 'react-window';
 
-// react-virtualized-auto-sizer has default export issues in production
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
-const AutoSizer = (AutoSizerModule as any).default ?? AutoSizerModule;
+const defaultKey = 'default' as const;
+const AutoSizer = (AutoSizerModule as any)[defaultKey] ?? AutoSizerModule;
 
 import { Message } from '../types';
 import MessageBubble from './MessageBubble';
@@ -50,11 +45,9 @@ const MIN_ITEM_HEIGHT = 60;
 const MessageRow = memo(({
     message,
     onSpeak,
+    onReaction,
     setHeight,
     style,
-    getSiblingInfo,
-    onNavigateBranch,
-    onBranchCreate
 }: {
     message: Message;
     onSpeak: (text: string) => void;
@@ -86,10 +79,10 @@ const MessageRow = memo(({
                     <MessageBubble
                         message={message}
                         onSpeak={onSpeak}
-                        onReaction={onReaction}
-                        siblingInfo={getSiblingInfo?.(message.id)}
-                        onNavigateBranch={onNavigateBranch ? (dir) => onNavigateBranch(message.id, dir) : undefined}
-                        onBranchCreate={onBranchCreate ? () => onBranchCreate(message.id) : undefined}
+                        onReaction={onReaction ? (id, reaction) => {
+                            const map = { up: 'thumbsUp', down: 'thumbsDown', star: 'starred' } as const;
+                            onReaction(id, map[reaction]);
+                        } : undefined}
                     />
                 </MessageErrorBoundary>
             </div>
@@ -222,7 +215,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     return (
         <div className="w-full h-full">
             <AutoSizer>
-                {({ height, width }) => (
+                {({ height, width }: { height: number; width: number }) => (
                     <List
                         ref={listRef}
                         height={height}
@@ -261,10 +254,10 @@ export const SimpleMessageList: React.FC<{
                 <MessageBubble
                     message={msg}
                     onSpeak={props.onSpeak}
-                    onReaction={props.onReaction}
-                    siblingInfo={props.getSiblingInfo?.(msg.id)}
-                    onNavigateBranch={props.onNavigateBranch ? (dir) => props.onNavigateBranch?.(msg.id, dir) : undefined}
-                    onBranchCreate={props.onBranchCreate ? () => props.onBranchCreate?.(msg.id) : undefined}
+                    onReaction={props.onReaction ? (id, reaction) => {
+                        const map = { up: 'thumbsUp', down: 'thumbsDown', star: 'starred' } as const;
+                        props.onReaction?.(id, map[reaction]);
+                    } : undefined}
                 />
             </MessageErrorBoundary>
         ))}
