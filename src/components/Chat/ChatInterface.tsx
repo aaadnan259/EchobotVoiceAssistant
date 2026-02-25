@@ -1,9 +1,5 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback } from 'react';
 import { toast } from 'sonner';
-import {
-    OrbState,
-    Orb
-} from '../../types'; // Wait, Orb is component. types has OrbState.
 import {
     TopBar,
     InputArea,
@@ -11,9 +7,7 @@ import {
     SearchResults,
     Orb as OrbComponent,
     ImageDropZone,
-    OrbErrorBoundary,
-    SummaryPanel // Moving to ModalManager? No, keeping here if it's not a modal.
-                 // Actually plan said ModalManager. Let's move it there.
+    OrbErrorBoundary
 } from '..';
 import { useChatContext } from '../../contexts/ChatContext';
 import { useUI } from '../../contexts/UIContext';
@@ -27,16 +21,15 @@ const VIRTUALIZATION_THRESHOLD = 50;
 export const ChatInterface: React.FC = () => {
     const {
         messages,
-        addMessage,
         addReaction,
-        updateMessage, // needed for SmartMessageList?
         createBranch,
         navigateUncles,
         getSiblingInfo,
         // Chat State
         orbState,
-        setOrbState,
         isGenerating,
+        isThinking,
+        isResponding,
         stopGeneration,
         sendMessage,
         // Input
@@ -94,8 +87,8 @@ export const ChatInterface: React.FC = () => {
 
     // --- Audio Analyzer ---
     const audioLevel = useAudioAnalyzer(
-        orbState === OrbState.LISTENING,
-        orbState === OrbState.RESPONDING
+        isListening,
+        isResponding
     );
 
     // --- Handlers ---
@@ -110,18 +103,16 @@ export const ChatInterface: React.FC = () => {
     const handleClearChat = useCallback(() => {
         if (window.confirm(CONFIRMATIONS.CLEAR_CHAT)) {
             clearMessages();
-            setOrbState(OrbState.IDLE);
         }
-    }, [clearMessages, setOrbState]);
+    }, [clearMessages]);
 
     const handleReset = useCallback(() => {
         clearMessages();
-        setOrbState(OrbState.IDLE);
         setInputValue('');
         clearImages();
         clearSearch();
         toast.success(SUCCESS.CHAT_RESET);
-    }, [clearMessages, setOrbState, setInputValue, clearImages, clearSearch]);
+    }, [clearMessages, setInputValue, clearImages, clearSearch]);
 
     const handleSaveChat = useCallback(() => {
         if (exportMessages()) {
@@ -164,7 +155,7 @@ export const ChatInterface: React.FC = () => {
                 onSaveChat={handleSaveChat}
                 onClearChat={handleClearChat}
                 onOpenSettings={() => setSettingsOpen(true)}
-                isMicActive={orbState === OrbState.LISTENING}
+                isMicActive={isListening}
                 onMicToggle={handleMicClick}
                 isVoiceEnabled={!!settings.voiceSettings?.voiceURI}
                 onVoiceToggle={() => {/* toggle voice logic if needed */ }}
@@ -227,7 +218,7 @@ export const ChatInterface: React.FC = () => {
                         <div className="w-full max-w-4xl mx-auto pb-32 px-4 sm:px-6">
                             <SmartMessageList
                                 messages={messages}
-                                isTyping={orbState === OrbState.THINKING}
+                                isTyping={isThinking}
                                 onSpeak={speak}
                                 onReaction={addReaction}
                                 getSiblingInfo={getSiblingInfo}

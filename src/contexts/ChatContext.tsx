@@ -39,6 +39,8 @@ interface ChatContextType {
     orbState: OrbState;
     setOrbState: (state: OrbState) => void;
     isGenerating: boolean;
+    isThinking: boolean;
+    isResponding: boolean;
     stopGeneration: () => void;
     sendMessage: () => void; // Sends current input
 
@@ -78,7 +80,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         addMessage,
         addPlaceholder,
         updateMessage,
-        clearMessages,
+        clearMessages: treeClearMessages,
         exportMessages,
         addReaction,
         createBranch,
@@ -87,6 +89,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         exportData,
         importData
     } = useConversationTree();
+
+    const clearMessages = useCallback(() => {
+        treeClearMessages();
+        setOrbState(OrbState.IDLE);
+    }, [treeClearMessages, setOrbState]);
 
     // --- Search ---
     const {
@@ -207,6 +214,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         orbState,
         setOrbState,
         isGenerating,
+        isThinking: orbState === OrbState.THINKING,
+        isResponding: orbState === OrbState.RESPONDING,
         stopGeneration,
         sendMessage,
         inputValue,
