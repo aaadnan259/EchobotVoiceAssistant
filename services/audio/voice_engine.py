@@ -78,8 +78,6 @@ class VoiceEngine:
         """Block until wake word is detected."""
         if not self.porcupine:
             # logger.warning("Wake word not configured. Skipping.")
-            import time
-            time.sleep(5) # Sleep to prevent busy loop
             return False # Return False so we don't proceed to listen()
 
         logger.info("Waiting for wake word...")

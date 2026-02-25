@@ -24,6 +24,10 @@ async def run_voice_loop():
                      if text:
                          # process_user_request is async, run directly
                          await process_user_request(text)
+                else:
+                    # If not detected (e.g. not configured), wait a bit before trying again
+                    # to prevent busy loop. Using asyncio.sleep is non-blocking and interruptible.
+                    await asyncio.sleep(5)
             except asyncio.CancelledError:
                 raise
             except Exception as e:
