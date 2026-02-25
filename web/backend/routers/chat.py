@@ -12,9 +12,32 @@ router = APIRouter(prefix="/api/gemini", tags=["chat"])
 # Initialize Service
 llm_service = LLMService()
 
+# --- Security: Server-controlled System Prompts ---
+DEFAULT_SYSTEM_PROMPT = """You are EchoBot, a helpful, friendly, and knowledgeable AI assistant.
+You communicate in a warm, conversational tone while being precise and informative.
+You can help with a wide variety of tasks including answering questions, creative writing,
+coding assistance, and general conversation."""
+
+SUMMARIZER_SYSTEM_PROMPT = "You are a helpful assistant tasked with summarizing a conversation."
+
+def get_safe_system_instruction(instruction: Optional[str]) -> str:
+    """ Strictly validate and return a server-controlled system prompt. """
+    if not instruction:
+        return DEFAULT_SYSTEM_PROMPT
+
+    # Allow summarization prompt if it matches the expected pattern
+    if "summarizing a conversation" in instruction.lower():
+        # Return our hardcoded safe version of the summarizer prompt
+        # We could also include the length/focus if we wanted to be more flexible,
+        # but for security, a hardcoded base is better.
+        return SUMMARIZER_SYSTEM_PROMPT
+
+    # Fallback to default EchoBot persona
+    return DEFAULT_SYSTEM_PROMPT
+
 class ChatRequest(BaseModel):
     modelName: str = "gemini-2.0-flash"
-    systemInstruction: str
+    systemInstruction: Optional[str] = None
     history: List[Dict[str, Any]]
     newMessage: str
     images: Optional[List[str]] = None
@@ -91,8 +114,11 @@ async def gemini_chat(request: ChatRequest):
     
     full_messages = formatted_messages + [{"role": "user", "content": request.newMessage}]
     
+    # Security Fix: Use validated system instruction
+    safe_instruction = get_safe_system_instruction(request.systemInstruction)
+
     return StreamingResponse(
-        llm_service.generate_stream(full_messages, request.systemInstruction),
+        llm_service.generate_stream(full_messages, safe_instruction),
         media_type="text/event-stream"
     )
 
@@ -104,7 +130,10 @@ async def gemini_chat_simple(request: ChatRequest):
         role = "user" if msg.get("role") == "user" else "model"
         formatted_messages.append({"role": role, "content": msg.get("text", "")})
         
+    # Security Fix: Use validated system instruction
+    safe_instruction = get_safe_system_instruction(request.systemInstruction)
+
     full_messages = formatted_messages + [{"role": "user", "content": request.newMessage}]
     
-    response = llm_service.get_response(full_messages)
+    response = llm_service.get_response(full_messages, system_instruction=safe_instruction)
     return {"text": response.content}
