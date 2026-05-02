@@ -159,8 +159,6 @@ const Orb: React.FC<OrbProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
         {/* Main Body */}
         <circle cx="0" cy="0" r="60" fill="url(#orbGradient)" />
 
-        {/* Specular Highlight */}
-        <ellipse cx="-25" cy="-25" rx="15" ry="10" fill="white" opacity="0.3" transform="rotate(-45)" />
 
         {/* Eyes Layer */}
         {getEyeShape()}
