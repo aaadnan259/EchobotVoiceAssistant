@@ -1,5 +1,6 @@
 import { Message } from "../types";
 import { logger } from "../utils/logger";
+import { getToken } from "./sessionService";
 
 /**
  * Streams response from Gemini via backend proxy.
@@ -11,10 +12,12 @@ export async function* streamGeminiResponse(
   newMessage: string,
   images?: string[]
 ): AsyncGenerator<string, void, unknown> {
+  const token = await getToken();
   const response = await fetch('/api/gemini/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
       modelName,
@@ -29,6 +32,10 @@ export async function* streamGeminiResponse(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      const { refreshToken } = await import('./sessionService');
+      refreshToken().catch(e => logger.error('Background token refresh failed', e));
+    }
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
@@ -55,23 +62,26 @@ export async function* streamGeminiResponse(
 
       for (const line of lines) {
         if (line.startsWith('data: ')) {
+          // Stage 1: Parse JSON (swallow parse errors only)
+          let data: any;
           try {
-            const data = JSON.parse(line.slice(6));
-
-            if (data.error) {
-              throw new Error(data.error);
-            }
-
-            if (data.text) {
-              yield data.text;
-            }
-
-            if (data.done) {
-              return;
-            }
-          } catch (parseError) {
-            // Skip invalid JSON lines
+            data = JSON.parse(line.slice(6));
+          } catch {
             logger.warn('Failed to parse SSE data:', line);
+            continue;
+          }
+
+          // Stage 2: Handle data (errors propagate to caller)
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          if (data.text) {
+            yield data.text;
+          }
+
+          if (data.done) {
+            return;
           }
         }
       }
@@ -91,10 +101,12 @@ export async function getGeminiResponse(
   newMessage: string,
   image?: string
 ): Promise<string> {
+  const token = await getToken();
   const response = await fetch('/api/gemini/chat-simple', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
     },
     body: JSON.stringify({
       modelName,
@@ -109,6 +121,10 @@ export async function getGeminiResponse(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      const { refreshToken } = await import('./sessionService');
+      refreshToken().catch(e => logger.error('Background token refresh failed', e));
+    }
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }

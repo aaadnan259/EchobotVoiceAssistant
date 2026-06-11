@@ -158,21 +158,34 @@ export function useSecureWebSocket(
     // Handle Authentication
     // ==========================================================================
 
-    const authenticate = useCallback(() => {
+    const authenticate = useCallback(async () => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             return;
         }
 
         setConnectionState('authenticating');
 
-        const authMessage = createAuthMessage({
-            ...authConfig,
-            clientId,
-        });
+        try {
+            const { getToken } = await import('../services/sessionService');
+            const token = await getToken();
 
-        wsRef.current.send(serializeAuthMessage(authMessage));
-        logger.debug('Sent authentication message');
-    }, [authConfig, clientId]);
+            const authMessage = createAuthMessage({
+                ...authConfig,
+                token,
+                clientId,
+            });
+
+            if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+                wsRef.current.send(serializeAuthMessage(authMessage));
+                logger.debug('Sent authentication message');
+            }
+        } catch (e) {
+            logger.error('Failed to get token for WS auth', e);
+            setConnectionState('error');
+            onAuthError?.('Failed to get token');
+            wsRef.current?.close();
+        }
+    }, [authConfig, clientId, onAuthError]);
 
     const handleAuthResponse = useCallback((response: WSAuthResponse) => {
         if (response.success) {
@@ -193,6 +206,11 @@ export function useSecureWebSocket(
             setConnectionState('error');
             logger.error('WebSocket authentication failed:', response.message);
             onAuthError?.(response.message || 'Authentication failed');
+            if (response.message === 'invalid token') {
+                import('../services/sessionService').then(({ refreshToken }) => {
+                    refreshToken().catch(e => logger.error('Failed to refresh token', e));
+                });
+            }
             wsRef.current?.close();
         }
     }, [onConnect, onAuthError, enableHeartbeat]);

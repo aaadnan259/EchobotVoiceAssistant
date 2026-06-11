@@ -17,6 +17,9 @@ colorama
 pyyaml
 jinja2
 python-multipart
+slowapi>=0.1.9
+itsdangerous>=2.1.0
+
 
 google-genai
 SpeechRecognition

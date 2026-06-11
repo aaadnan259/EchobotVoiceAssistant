@@ -1,10 +1,11 @@
-from fastapi import FastAPI, WebSocket, Request, HTTPException
+from fastapi import FastAPI, WebSocket, Request, HTTPException, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 import uvicorn
 import json
+import uuid
 import asyncio
 import threading
 from contextlib import asynccontextmanager
@@ -13,6 +14,11 @@ import os
 import base64
 from pydantic import BaseModel
 from google import genai  # NEW SDK
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request as StarletteRequest
+from fastapi.responses import JSONResponse
 
 from config.loader import ConfigLoader
 from services.plugin_manager import PluginManager
@@ -80,6 +86,17 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down EchoBot...")
 
 app = FastAPI(title="EchoBot Web UI", lifespan=lifespan)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: StarletteRequest, exc: RateLimitExceeded):
+    retry_after = getattr(exc, 'retry_after', 60)
+    return JSONResponse(
+        status_code=429,
+        content={"error": "rate limited"},
+        headers={"Retry-After": str(retry_after)},
+    )
 
 class ChatRequest(BaseModel):
     modelName: str = "gemini-2.5-flash"
@@ -107,96 +124,160 @@ def decode_image(base64_string: str):
     
     return {"mime_type": mime_type, "data": base64_string}
 
-@app.post("/api/gemini/chat")
-async def gemini_chat(request: ChatRequest):
-    global gemini_client
-    
-    if not gemini_client:
-         api_key = ConfigLoader.get("ai.google_api_key")
-         if not api_key:
-              raise HTTPException(status_code=500, detail="Google API Key not configured on server")
-         gemini_client = genai.Client(api_key=api_key)
+# Model allowlist (D4) — env-configurable
+ALLOWED_MODELS = [m.strip() for m in os.environ.get(
+    "GEMINI_ALLOWED_MODELS", "gemini-2.5-flash,gemini-2.5-flash-lite"
+).split(",")]
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", ConfigLoader.get("ai.llm_model", "gemini-2.5-flash"))
 
-    client = gemini_client
-    target_model = "gemini-2.5-flash"
+def get_validated_model(requested: str) -> str:
+    """Return requested model if allowed, else default. Log rejected requests."""
+    if requested in ALLOWED_MODELS:
+        return requested
+    logger.warning(f"Rejected model '{requested}', falling back to '{DEFAULT_MODEL}'")
+    return DEFAULT_MODEL
 
-    # Format history for Gemini SDK
-    gemini_contents = []
-    
+def build_gemini_contents(request: ChatRequest) -> list:
+    """Build Gemini SDK contents from a ChatRequest. Single source of truth."""
+    contents = []
     for msg in request.history:
         role = "user" if msg.get("role") == "user" else "model"
         parts = [{"text": msg.get("text", "")}]
-        gemini_contents.append({"role": role, "parts": parts})
-    
-    # Process current message and images
+        contents.append({"role": role, "parts": parts})
+
     current_parts = [{"text": request.newMessage}]
     if request.images:
         for img_str in request.images:
             img_data = decode_image(img_str)
             if img_data:
                 current_parts.append(img_data)
-    
-    gemini_contents.append({"role": "user", "parts": current_parts})
-    
+
+    contents.append({"role": "user", "parts": current_parts})
+    return contents
+
+RATE_LIMIT_CHAT = os.environ.get("RATE_LIMIT_CHAT", "10/minute")
+
+from fastapi import Depends
+from web.backend.auth import create_session_token, validate_session_token, SESSION_MAX_AGE
+
+@app.get("/api/session")
+@limiter.limit("20/minute")
+async def get_session(request: Request):
+    token = create_session_token()
+    return {"token": token, "expiresIn": SESSION_MAX_AGE}
+
+async def require_valid_token(request: Request) -> dict:
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+    token = auth_header[7:]
+    payload = validate_session_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return payload
+
+@app.post("/api/gemini/chat")
+@limiter.limit(RATE_LIMIT_CHAT)
+async def gemini_chat(chat_request: ChatRequest, request: Request, _token=Depends(require_valid_token)):
+    if not gemini_client:
+        raise HTTPException(status_code=503, detail="AI service not configured")
+
+    model = get_validated_model(chat_request.modelName)
+    contents = build_gemini_contents(chat_request)
+    config_dict = {"system_instruction": chat_request.systemInstruction} if chat_request.systemInstruction else None
+
     async def event_generator():
         try:
-            response = client.models.generate_content_stream(
-                model=target_model,
-                contents=gemini_contents,
-                config={'system_instruction': request.systemInstruction}
-            )
-            
-            for chunk in response:
-                if chunk.text:
-                    payload = json.dumps({"text": chunk.text})
-                    yield f"data: {payload}\n\n"
-                    
+            if hasattr(gemini_client, 'aio'):
+                response = await gemini_client.aio.models.generate_content_stream(
+                    model=model,
+                    contents=contents,
+                    config=config_dict,
+                )
+                async for chunk in response:
+                    if chunk.text:
+                        yield f"data: {json.dumps({'text': chunk.text})}\n\n"
+            else:
+                response = await asyncio.to_thread(
+                    gemini_client.models.generate_content_stream,
+                    model=model,
+                    contents=contents,
+                    config=config_dict,
+                )
+                for chunk in response:
+                    if chunk.text:
+                        yield f"data: {json.dumps({'text': chunk.text})}\n\n"
+                        await asyncio.sleep(0)
+                        
             yield f"data: {json.dumps({'done': True})}\n\n"
-            
         except Exception as e:
             logger.error(f"Gemini Streaming Error: {e}")
-            error_payload = json.dumps({"error": str(e)})
-            yield f"data: {error_payload}\n\n"
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/api/gemini/chat-simple")
-async def gemini_chat_simple(request: ChatRequest):
+@limiter.limit(RATE_LIMIT_CHAT)
+async def gemini_chat_simple(chat_request: ChatRequest, request: Request, _token=Depends(require_valid_token)):
     """Non-streaming request."""
-    global gemini_client
-
     if not gemini_client:
-         api_key = ConfigLoader.get("ai.google_api_key")
-         if not api_key:
-              raise HTTPException(status_code=500, detail="Google API Key not configured")
-         gemini_client = genai.Client(api_key=api_key)
-         
-    client = gemini_client
-    target_model = "gemini-2.5-flash"
+        raise HTTPException(status_code=503, detail="AI service not configured")
 
-    response = client.models.generate_content(
-        model=target_model,
-        contents=[request.newMessage],
-        config={'system_instruction': request.systemInstruction}
-    )
+    model = get_validated_model(chat_request.modelName)
+    contents = build_gemini_contents(chat_request)  # Now respects history + images
+    config_dict = {"system_instruction": chat_request.systemInstruction} if chat_request.systemInstruction else None
+
+    if hasattr(gemini_client, 'aio'):
+        response = await gemini_client.aio.models.generate_content(
+            model=model,
+            contents=contents,
+            config=config_dict,
+        )
+    else:
+        response = await asyncio.to_thread(
+            gemini_client.models.generate_content,
+            model=model,
+            contents=contents,
+            config=config_dict,
+        )
     return {"text": response.text}
 
 
 # CORS - Restrict to known origins
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:8000",
-    os.getenv("FRONTEND_URL", ""),
-]
+is_prod = os.environ.get("RENDER") is not None
+if is_prod:
+    frontend_url = os.environ.get("FRONTEND_URL", "").strip()
+    ALLOWED_ORIGINS = [frontend_url] if frontend_url else []
+else:
+    ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+    ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o for o in ALLOWED_ORIGINS if o],
+    allow_origins=[o for o in ALLOWED_ORIGINS if o] if ALLOWED_ORIGINS else ["*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
+
+@app.get("/api/health")
+async def health_check():
+    return {
+        "status": "healthy",
+        "version": "1.0",
+        "environment": "production" if is_prod else "development",
+        "services": {
+            "llm": gemini_client is not None,
+            "tts": tts_engine.is_available if tts_engine else False,
+            "voice": voice_engine is not None
+        }
+    }
 
 # --- Static Files & Template Configuration (Robust Fix) ---
 current_dir = os.path.dirname(os.path.abspath(__file__)) # web/backend
@@ -256,20 +337,41 @@ llm_service = LLMService()
 tts_engine = TTSEngine()
 voice_engine = None
 
+MAX_WS_CONNECTIONS_PER_IP = int(os.environ.get("MAX_WS_PER_IP", "5"))
+
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
+        client_ip = websocket.client.host if websocket.client else "unknown"
+        ip_connections = sum(
+            1 for c in self.active_connections
+            if c.client and c.client.host == client_ip
+        )
+        if ip_connections >= MAX_WS_CONNECTIONS_PER_IP:
+            await websocket.close(code=1008, reason="too many connections")
+            return False
         await websocket.accept()
         self.active_connections.append(websocket)
+        return True
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def send_to(self, websocket: WebSocket, message: str):
+        try:
+            await websocket.send_text(message)
+        except Exception:
+            self.disconnect(websocket)
 
     async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            await connection.send_text(message)
+        for connection in list(self.active_connections):
+            try:
+                await connection.send_text(message)
+            except Exception:
+                self.disconnect(connection)
 
 manager = ConnectionManager()
 
@@ -330,7 +432,7 @@ async def run_voice_loop():
         logger.info("Voice Input Loop Cancelled")
 
 # --- Core Processing Logic ---
-async def process_user_request(user_text: str):
+async def process_user_request(user_text: str, websocket: WebSocket = None):
     logger.info(f"=== PROCESSING REQUEST: {user_text} ===")
     
     # 1. Prepare Context (RAG)
@@ -355,7 +457,11 @@ async def process_user_request(user_text: str):
     response_message = await asyncio.to_thread(llm_service.get_response, messages, tools=tools)
     
     if isinstance(response_message, str):
-        await manager.broadcast(json.dumps({"type": "error", "text": response_message}))
+        payload_str = json.dumps({"type": "error", "text": response_message})
+        if websocket:
+            await manager.send_to(websocket, payload_str)
+        else:
+            await manager.broadcast(payload_str)
         return
 
     response_text = getattr(response_message, 'content', "")
@@ -390,7 +496,12 @@ async def process_user_request(user_text: str):
             "text": response_text,
             "audio": audio_b64
     }
-    await manager.broadcast(json.dumps(payload))
+    payload_str = json.dumps(payload)
+    if websocket:
+        await manager.send_to(websocket, payload_str)
+    else:
+        await manager.broadcast(payload_str)
+        
     if not audio_b64:
         await manager.broadcast(json.dumps({"status": "idle"}))
 
@@ -441,11 +552,7 @@ async def get_settings():
 
     return settings
 
-@app.post("/api/settings")
-async def update_settings(settings: SettingsUpdate):
-    settings_safe = settings.dict()
-    settings_safe["google_api_key"] = "REDACTED"
-    return {"status": "success", "settings": settings}
+
 
 @app.get("/{full_path:path}")
 async def serve_spa_catchall(full_path: str, request: Request):
@@ -461,21 +568,62 @@ async def serve_spa_catchall(full_path: str, request: Request):
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
+    if not await manager.connect(websocket):
+        return
     try:
         while True:
-            user_text = await websocket.receive_text()
-            logger.info(f"WebSocket Received: {user_text}")
-            await process_user_request(user_text)
+            raw = await websocket.receive_text()
+            # Parse JSON envelope
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                await manager.send_to(websocket, json.dumps(
+                    {"type": "error", "text": "invalid message format"}
+                ))
+                continue
+
+            msg_type = msg.get("type")
+
+            if msg_type == "auth":
+                token = msg.get("token")
+                payload = validate_session_token(token) if token else None
+                if payload:
+                    session_id = payload.get("sid", str(uuid.uuid4()))
+                    await manager.send_to(websocket, json.dumps({
+                        "type": "auth_response",
+                        "success": True,
+                        "sessionId": session_id,
+                    }))
+                else:
+                    await manager.send_to(websocket, json.dumps({
+                        "type": "auth_response",
+                        "success": False,
+                        "message": "invalid token"
+                    }))
+                    await websocket.close(code=1008)
+                    return
+
+            elif msg_type == "ping":
+                await manager.send_to(websocket, json.dumps({"type": "pong"}))
+
+            else:
+                # No chat type (D1). Unknown types get an error frame.
+                await manager.send_to(websocket, json.dumps(
+                    {"type": "error", "text": f"unknown message type: {msg_type}"}
+                ))
+
+    except WebSocketDisconnect:
+        logger.info("WebSocket client disconnected")
     except Exception as e:
-        logger.error(f"WebSocket Error: {e}")
+        logger.error(f"WebSocket error: {e}")
+    finally:
         manager.disconnect(websocket)
 
 def run_web_server():
     host = ConfigLoader.get("web.host", "0.0.0.0")
     port = ConfigLoader.get("web.port", 8000)
     logger.info(f"Starting Web Server on {host}:{port}")
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(app, host=host, port=port, proxy_headers=True, forwarded_allow_ips="*")
 
 if __name__ == "__main__":
     run_web_server()

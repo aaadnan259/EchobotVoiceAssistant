@@ -27,6 +27,9 @@ export function useChat({
     const [isGenerating, setIsGenerating] = useState(false);
     const [orbState, setOrbState] = useState<OrbState>(OrbState.IDLE);
     const stopGenerationRef = useRef(false);
+    
+    const messagesRef = useRef(messages);
+    messagesRef.current = messages;
 
     const updateOrbState = useCallback((state: OrbState) => {
         setOrbState(state);
@@ -62,7 +65,7 @@ export function useChat({
             const stream = await streamGeminiResponse(
                 settings.model,
                 settings.systemPrompt,
-                messages,
+                messagesRef.current,
                 userText,
                 images
             );
@@ -95,9 +98,14 @@ export function useChat({
                 updateOrbState(OrbState.ERROR);
                 playSound('error');
 
-                const errorMessage = error.message
-                    ? `Error: ${error.message}`
-                    : ERRORS.GENERIC;
+                const msg = (error.message || '').toLowerCase();
+                const errorMessage = msg.includes('429') || msg.includes('rate') || msg.includes('quota')
+                    ? ERRORS.RATE_LIMIT
+                    : msg.includes('safety') || msg.includes('block')
+                        ? ERRORS.SAFETY
+                        : msg.includes('api key') || msg.includes('not configured')
+                            ? ERRORS.NO_API_KEY
+                            : ERRORS.GENERIC;
 
                 updateMessage(botMsgId, { text: errorMessage });
 
@@ -108,7 +116,7 @@ export function useChat({
         } finally {
             setIsGenerating(false);
         }
-    }, [messages, settings, addMessage, addPlaceholder, updateMessage, updateOrbState]);
+    }, [settings, addMessage, addPlaceholder, updateMessage, updateOrbState]);
 
     const stopGeneration = useCallback(() => {
         stopGenerationRef.current = true;

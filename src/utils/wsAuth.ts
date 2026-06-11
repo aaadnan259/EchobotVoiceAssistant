@@ -139,43 +139,7 @@ export function clearToken(): void {
     }
 }
 
-// =============================================================================
-// Simple Token Generation (for demo/development)
-// =============================================================================
 
-/**
- * Generate a simple token for development/demo purposes.
- * In production, tokens should come from your auth server.
- */
-export function generateSimpleToken(): string {
-    const payload = {
-        clientId: getClientId(),
-        timestamp: Date.now(),
-        nonce: Math.random().toString(36).substring(2),
-    };
-
-    // Base64 encode (NOT secure, just for demo)
-    return btoa(JSON.stringify(payload));
-}
-
-/**
- * Validate a simple token (development only)
- */
-export function validateSimpleToken(token: string): boolean {
-    try {
-        const payload = JSON.parse(atob(token));
-
-        // Check token age (valid for 24 hours)
-        const maxAge = 24 * 60 * 60 * 1000;
-        if (Date.now() - payload.timestamp > maxAge) {
-            return false;
-        }
-
-        return true;
-    } catch {
-        return false;
-    }
-}
 
 // =============================================================================
 // Heartbeat Management
@@ -325,8 +289,6 @@ export default {
     storeToken,
     getStoredToken,
     clearToken,
-    generateSimpleToken,
-    validateSimpleToken,
     createHeartbeat,
     createRateLimiter,
 };
