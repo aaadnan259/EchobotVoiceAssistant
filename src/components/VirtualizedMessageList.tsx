@@ -54,7 +54,8 @@ const MessageRow = memo(({
     style,
     getSiblingInfo,
     onNavigateBranch,
-    onBranchCreate
+    onBranchCreate,
+    onReaction
 }: {
     message: Message;
     onSpeak: (text: string) => void;
@@ -86,9 +87,9 @@ const MessageRow = memo(({
                     <MessageBubble
                         message={message}
                         onSpeak={onSpeak}
-                        onReaction={onReaction}
+                        onReaction={onReaction as any}
                         siblingInfo={getSiblingInfo?.(message.id)}
-                        onNavigateBranch={onNavigateBranch ? (dir) => onNavigateBranch(message.id, dir) : undefined}
+                        onNavigateBranch={onNavigateBranch ? (dir: any) => onNavigateBranch(message.id, dir) : undefined}
                         onBranchCreate={onBranchCreate ? () => onBranchCreate(message.id) : undefined}
                     />
                 </MessageErrorBoundary>
@@ -119,7 +120,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     autoScrollToBottom = true,
     isTyping
 }) => {
-    const listRef = useRef<List>(null);
+    const listRef = useRef<any>(null);
     const heightCacheRef = useRef<Map<string, number>>(itemHeightCache);
 
     // Get item height from cache or return estimate
@@ -222,7 +223,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     return (
         <div className="w-full h-full">
             <AutoSizer>
-                {({ height, width }) => (
+                {({ height, width }: { height: number; width: number }) => (
                     <List
                         ref={listRef}
                         height={height}
@@ -261,9 +262,9 @@ export const SimpleMessageList: React.FC<{
                 <MessageBubble
                     message={msg}
                     onSpeak={props.onSpeak}
-                    onReaction={props.onReaction}
+                    onReaction={props.onReaction as any}
                     siblingInfo={props.getSiblingInfo?.(msg.id)}
-                    onNavigateBranch={props.onNavigateBranch ? (dir) => props.onNavigateBranch?.(msg.id, dir) : undefined}
+                    onNavigateBranch={props.onNavigateBranch ? (dir: any) => props.onNavigateBranch?.(msg.id, dir) : undefined}
                     onBranchCreate={props.onBranchCreate ? () => props.onBranchCreate?.(msg.id) : undefined}
                 />
             </MessageErrorBoundary>

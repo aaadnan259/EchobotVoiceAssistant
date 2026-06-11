@@ -149,6 +149,7 @@ export const CHAT_MESSAGES = {
     SUCCESS: {
         CHAT_SAVED: 'Chat saved to device',
         CONNECTED: 'Connected to EchoBot Brain',
+        CHAT_RESET: 'Chat reset',
     },
 
     /** Confirmation messages */

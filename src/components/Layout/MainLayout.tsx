@@ -17,6 +17,7 @@ export const MainLayout: React.FC<{ children: ReactNode }> = ({ children }) => {
             [OrbState.THINKING]: 'Processing your message',
             [OrbState.RESPONDING]: 'EchoBot is responding',
             [OrbState.ERROR]: 'An error occurred',
+            [OrbState.TRACKING]: 'Tracking user',
         };
         const description = stateDescriptions[orbState];
         if (description) {

@@ -10,6 +10,9 @@ interface MessageBubbleProps {
   onRegenerate?: (messageId: string) => void;
   onReaction?: (messageId: string, reaction: 'up' | 'down' | 'star') => void;
   isLastBotMessage?: boolean;
+  siblingInfo?: { current: number; total: number; hasPrev: boolean; hasNext: boolean } | null;
+  onNavigateBranch?: (direction: 'prev' | 'next') => void;
+  onBranchCreate?: () => void;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -19,6 +22,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   onRegenerate,
   onReaction,
   isLastBotMessage = false,
+  siblingInfo,
+  onNavigateBranch,
+  onBranchCreate,
 }) => {
   const isUser = message.role === 'user';
   const isBot = message.role === 'model';

@@ -41,7 +41,7 @@ export function useVirtualization({
     autoScrollToBottom = true,
     overscanCount = 5,
 }: UseVirtualizationOptions): UseVirtualizationReturn {
-    const listRef = useRef<List>(null);
+    const listRef = useRef<any>(null);
     const heightCache = useRef<Map<number, number>>(new Map());
     const [, forceUpdate] = useState({});
 

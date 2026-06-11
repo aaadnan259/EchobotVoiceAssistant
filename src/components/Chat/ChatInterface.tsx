@@ -1,9 +1,8 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
-    OrbState,
-    Orb
-} from '../../types'; // Wait, Orb is component. types has OrbState.
+    OrbState
+} from '../../types';
 import {
     TopBar,
     InputArea,
@@ -120,7 +119,7 @@ export const ChatInterface: React.FC = () => {
         setInputValue('');
         clearImages();
         clearSearch();
-        toast.success(SUCCESS.CHAT_RESET);
+        toast.success(SUCCESS.CHAT_RESET || 'Chat reset');
     }, [clearMessages, setOrbState, setInputValue, clearImages, clearSearch]);
 
     const handleSaveChat = useCallback(() => {
@@ -255,7 +254,8 @@ export const ChatInterface: React.FC = () => {
                     onStopGeneration={stopGeneration}
                     isGenerating={isGenerating}
                     isListening={isListening}
-                    fileInputRef={fileInputRef}
+                    isMicActive={isListening}
+                    fileInputRef={fileInputRef as any}
                 />
             </div>
         </>

@@ -48,4 +48,33 @@ describe('useChat', () => {
         expect(updateId).toBe('placeholder-id');
         expect(updateData.text).toContain(ERRORS.RATE_LIMIT);
     });
+
+    it('sets isGenerating to true during stream and resets to false on success', async () => {
+        const mockStream = async function* () {
+            yield 'Hello';
+            yield ' World';
+        };
+        (streamGeminiResponse as any).mockImplementation(mockStream);
+
+        const { result } = renderHook(() => useChat({
+            messages: [],
+            addMessage: vi.fn(),
+            addPlaceholder: vi.fn(() => 'placeholder-id'),
+            updateMessage: vi.fn(),
+            settings: { model: 'test', systemPrompt: '' } as any
+        }));
+
+        let promise: Promise<void>;
+        act(() => {
+            promise = result.current.sendMessage('Hi');
+        });
+
+        expect(result.current.isGenerating).toBe(true);
+
+        await act(async () => {
+            await promise;
+        });
+
+        expect(result.current.isGenerating).toBe(false);
+    });
 });

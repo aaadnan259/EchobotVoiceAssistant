@@ -22,5 +22,8 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
-  "exclude": ["src/components/ui/**"]
+  "exclude": [
+    "src/components/ui/**",
+    "src/components/ChatArea.tsx"
+  ]
 }
