@@ -16,7 +16,6 @@ const {
     MAX_RECONNECT_DELAY,
     MAX_RECONNECT_ATTEMPTS: DEFAULT_MAX_ATTEMPTS,
     WS_PATH,
-    DEV_WS_PORT,
 } = WEBSOCKET_CONFIG;
 
 
@@ -82,11 +81,6 @@ function getWebSocketUrl(): string {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
-
-    const isDev = (import.meta as any).env?.DEV;
-    if (isDev) {
-        return `ws://${window.location.hostname}:${DEV_WS_PORT}${WS_PATH}`;
-    }
 
     return `${protocol}//${host}${port}${WS_PATH}`;
 }

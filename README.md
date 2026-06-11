@@ -1,67 +1,32 @@
-# EchoBot
+# EchoBot Voice Assistant
 
-Voice-enabled AI assistant integrating Google Gemini 2.0 Flash with a React frontend and FastAPI backend.
-
-## Overview
-
-Full-stack application facilitating real-time voice and text interaction with LLMs. Features include streaming responses, multi-modal input (images), and conversation branching.
-
-## Architecture
-
-- **Frontend**: React 18, TypeScript, Vite. Handles UI, audio capture/playback, and state management.
-- **Backend**: Python FastAPI. Proxies LLM requests, manages API keys, and routes websocket connections.
-- **AI**: Google Gemini 2.0 Flash (via `google-genai` SDK).
-- **Storage**: Local filesystem for limited persistence (if enabled).
+An AI-powered voice assistant capable of real-time streaming conversations.
+Built with React, Vite, FastAPI, and the Gemini API.
 
 ## Setup
 
-### Prerequisites
+1. Copy `.env.example` to `.env` and fill in your keys.
+   ```bash
+   cp .env.example .env
+   ```
+2. Install Python dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Install Node dependencies:
+   ```bash
+   npm install
+   ```
+4. Start both servers:
+   ```bash
+   # Terminal 1: Backend
+   python main.py
+   
+   # Terminal 2: Frontend
+   npm run dev
+   ```
 
-- Node.js 18+
-- Python 3.11+
-- Google Gemini API Key
+## Architecture
 
-### Installation
-
-```bash
-git clone https://github.com/aaadnan259/EchobotVoiceAssistant.git
-cd EchobotVoiceAssistant
-
-# Frontend
-npm install
-
-# Backend
-pip install -r requirements.txt
-```
-
-### Configuration
-
-Create `.env`:
-
-```ini
-GEMINI_API_KEY=your_key_here
-# Optional
-OPENAI_API_KEY=...
-ELEVENLABS_API_KEY=...
-```
-
-### Development
-
-Run frontend and backend in separate terminals:
-
-```bash
-# Terminal 1: Frontend (http://localhost:5173)
-npm run dev
-
-# Terminal 2: Backend (http://localhost:8000)
-python main.py
-```
-
-### Deployment
-
-Docker build supported. Render-ready via `render.yaml`.
-
-```bash
-docker build -t echobot .
-docker run -p 3000:3000 -e GEMINI_API_KEY=... echobot
-```
+- **Backend:** FastAPI, `google-genai` SDK async endpoints, `itsdangerous` session tokens, WebSocket handling.
+- **Frontend:** React, TailwindCSS, Vite. Uses SSE and secure WebSockets.

@@ -31,8 +31,6 @@ Every deviation from the handoff document, every choice on D-items and Q-items, 
 | Item | Deferred to | Rationale |
 |------|-------------|-----------|
 | Stale `connectionState` closure in `useSecureWebSocket` `onmessage` (L259) | Sprint 2 T11 | Latent bug: `connectionState` in the `connect` dep array may be stale when checking `connectionState === 'connected'`. MUST fix before T11, otherwise status/notification frames silently dropped post-auth. |
-| `sessionService.fetchToken` AbortController timeout | Sprint 2 | Wire a real timeout or remove. Currently no AbortController is used (the plan's initial draft mentioned one but the actual implementation does not include it). |
-| `useWebSocket.ts` deletion | T7 (pulled forward from Sprint 2 T12 per Correction 3) | Removing `DEV_WS_PORT` from `WEBSOCKET_CONFIG` would break `tsc` since `useWebSocket.ts` also destructures it. Deletion pulled forward. |
 
 ### Corrections Applied
 
@@ -41,3 +39,4 @@ Every deviation from the handoff document, every choice on D-items and Q-items, 
 | C1 | T5 | Pydantic param renamed `chat_request`, Starlette param `request` | slowapi discovers client IP via the parameter named `request` (must be Starlette Request, not Pydantic model). |
 | C2 | T5 | `uvicorn.run(..., proxy_headers=True, forwarded_allow_ips="*")` | Behind Render's proxy, `websocket.client.host` and slowapi see proxy IP. All users would share one rate bucket. |
 | C3 | T7 | `useWebSocket.ts` deleted in T7 instead of Sprint 2 T12 | It destructures `DEV_WS_PORT` from `WEBSOCKET_CONFIG`; removing that constant without deleting this file breaks `tsc`. |
+| C4 | T6 | `sessionService.fetchToken` AbortController | The initial plan mentioned an AbortController, but the actual implementation does not include one. The cold-start toast `setTimeout` is correctly cleared on both success and error paths, preventing stray toasts. This is closed, not deferred. |

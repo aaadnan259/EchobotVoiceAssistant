@@ -54,7 +54,6 @@ export const WEBSOCKET_CONFIG = {
 
     /** WebSocket endpoint path */
     WS_PATH: '/ws',
-
     /** Development WebSocket port */
     DEV_WS_PORT: 8000,
 } as const;

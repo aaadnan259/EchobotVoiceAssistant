@@ -7,7 +7,10 @@ services:
     envVars:
       - key: PORT
         value: 8000
-      - key: WEB_ENABLED
-        value: true
       - key: GOOGLE_API_KEY
         sync: false # User must provide this in Render Dashboard
+      - key: SESSION_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+    healthCheckPath: /api/health

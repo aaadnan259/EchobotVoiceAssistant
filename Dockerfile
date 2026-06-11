@@ -30,10 +30,10 @@ COPY --from=frontend-build /app/build /app/build
 
 # Environment Variables
 ENV PYTHONUNBUFFERED=1
-ENV PORT=3000
+ENV PORT=8000
 
 # Expose Port
-EXPOSE 3000
+EXPOSE 8000
 
 # Run Command (Uses PORT env var)
 CMD ["python", "main.py"]

@@ -98,8 +98,12 @@ export default defineConfig({
     proxy: {
       // Proxy API requests to your Express server during development
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8000',
         changeOrigin: true,
+      },
+      '/ws': {
+        target: 'ws://localhost:8000',
+        ws: true,
       }
     }
   },
