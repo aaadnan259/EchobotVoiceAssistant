@@ -51,7 +51,7 @@ export function useChat({
             images,
             image: images?.[0] // Backward compat
         });
-        playSound('send');
+        playSound('SEND');
 
         // Set up for response
         updateOrbState(OrbState.THINKING);
@@ -71,7 +71,7 @@ export function useChat({
             );
 
             updateOrbState(OrbState.RESPONDING);
-            playSound('receive');
+            playSound('RECEIVE');
 
             let fullText = '';
             let groundingMetadata: any = undefined;
@@ -79,7 +79,7 @@ export function useChat({
             for await (const chunk of stream) {
                 if (stopGenerationRef.current) break;
 
-                const chunkText = typeof chunk === 'string' ? chunk : (chunk?.text || '');
+                const chunkText = typeof chunk === 'string' ? chunk : ((chunk as any)?.text || '');
                 fullText += chunkText;
 
                 // Grounding metadata would be processed here if provided by backend
@@ -96,7 +96,7 @@ export function useChat({
 
             if (!stopGenerationRef.current) {
                 updateOrbState(OrbState.ERROR);
-                playSound('error');
+                playSound('ERROR');
 
                 const msg = (error.message || '').toLowerCase();
                 const errorMessage = msg.includes('429') || msg.includes('rate') || msg.includes('quota')

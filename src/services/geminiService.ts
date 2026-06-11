@@ -99,7 +99,7 @@ export async function getGeminiResponse(
   systemInstruction: string,
   history: Message[],
   newMessage: string,
-  image?: string
+  images?: string[]
 ): Promise<string> {
   const token = await getToken();
   const response = await fetch('/api/gemini/chat-simple', {
@@ -116,7 +116,7 @@ export async function getGeminiResponse(
         text: msg.text
       })),
       newMessage,
-      image
+      images
     }),
   });
 
@@ -141,14 +141,14 @@ export const streamGeminiResponseLegacy = async (
   systemInstruction: string,
   history: Message[],
   newMessage: string,
-  image?: string
+  images?: string[]
 ) => {
   const generator = streamGeminiResponse(
     modelName,
     systemInstruction,
     history,
     newMessage,
-    image
+    images
   );
 
   return {

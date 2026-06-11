@@ -29,7 +29,7 @@ interface ChatContextType {
     // Branching
     createBranch: (messageId: string) => void;
     navigateUncles: (messageId: string, direction: 'prev' | 'next') => void;
-    getSiblingInfo: (messageId: string) => { current: number; total: number; parentId: string | null } | null;
+    getSiblingInfo: (messageId: string) => { current: number; total: number; hasPrev: boolean; hasNext: boolean } | null;
 
     // Export/Import Data
     exportData: (format: ExportFormat, options: { includeImages: boolean }) => Promise<Blob>;
@@ -51,7 +51,7 @@ interface ChatContextType {
     handlePaste: (e: React.ClipboardEvent) => void;
     removeImage: (index: number) => void;
     clearImages: () => void;
-    fileInputRef: React.RefObject<HTMLInputElement>;
+    fileInputRef: React.RefObject<HTMLInputElement | null>;
 
     // Voice
     isListening: boolean;
@@ -169,7 +169,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
             if (data.text) {
                 addMessage({ role: 'model', text: data.text });
-                playSound('receive');
+                playSound('RECEIVE');
             }
 
             if (data.audio) {

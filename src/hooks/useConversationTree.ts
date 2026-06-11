@@ -359,7 +359,7 @@ export function useConversationTree() {
 
     // Legacy support exports
     const exportMessages = () => { /* ... existing export logic adapted ... */ return true; };
-    const getSanitizedText = (id: string) => messages[id] ? sanitizeMessage(messages[id].text) : '';
+    const getSanitizedText = (id: string) => conversation.messages[id] ? sanitizeMessage(conversation.messages[id].text) : '';
     const addReaction = (id: string, reaction: any) => { /* reuse existing reaction logic */ };
 
 

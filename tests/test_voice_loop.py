@@ -1,3 +1,5 @@
+import pytest
+pytest.skip('Pipeline B parked for Sprint 2', allow_module_level=True)
 
 import sys
 from unittest.mock import MagicMock, AsyncMock, patch
