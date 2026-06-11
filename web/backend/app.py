@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="EchoBot Web UI", lifespan=lifespan)
 
 class ChatRequest(BaseModel):
-    modelName: str = "gemini-2.0-flash"
+    modelName: str = "gemini-2.5-flash"
     systemInstruction: str
     history: List[Dict[str, Any]]
     newMessage: str
@@ -118,7 +118,7 @@ async def gemini_chat(request: ChatRequest):
          gemini_client = genai.Client(api_key=api_key)
 
     client = gemini_client
-    target_model = "gemini-2.0-flash"
+    target_model = "gemini-2.5-flash"
 
     # Format history for Gemini SDK
     gemini_contents = []
@@ -172,7 +172,7 @@ async def gemini_chat_simple(request: ChatRequest):
          gemini_client = genai.Client(api_key=api_key)
          
     client = gemini_client
-    target_model = "gemini-2.0-flash"
+    target_model = "gemini-2.5-flash"
 
     response = client.models.generate_content(
         model=target_model,
