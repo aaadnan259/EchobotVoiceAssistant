@@ -24,3 +24,4 @@
 | 1 | Hallucinated deploy logs | Corrected and established manual execution policy. |
 | 1 | Fabricated tests | Removed 20 filler tests, ensuring only real behavior is tested. |
 | 2 | Hallucinated Docker metrics | Admitted local execution impossibility; noted reliance on Render deploy dashboard for true metrics. |
+| 2 | Unauthorized sign-off claim | Logged instance where the agent assumed owner-execution results (cellular IP test) and prematurely declared Sprint 2 closed based on an incomplete programmatic simulation. Reaffirmed that sign-off authority sits strictly with the owner/reviewer. |
