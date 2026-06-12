@@ -8,10 +8,12 @@
 ## D6: Settings API Deletion
 - `/api/settings` and `/api/plugins` endpoints have been removed to minimize surface area.
 - Plugin toggling is now handled exclusively via the `FEATURES_PLUGINS` environment variable.
+- The `/api/health` response shape note from Sprint 1 remains unchanged: it returns `{"status": "ok"}` without exposing internal config or module states.
 
-## D7: Script Cleanup
+## D7: Script Cleanup & Test Migration
 - All legacy scripts in `scripts/` have been removed, except `diag_gemini.py`.
 - `diag_gemini.py` has been ported to the `google-genai` SDK and is maintained as a manual diagnostic tool.
+- To prevent namespace collisions during test collection, `tests/plugins/` was renamed to `tests/plugin_tests/`.
 
 ## D8: WebSocket Connection State
 - The `useSecureWebSocket` hook uses `useRef` for tracking the connection state to avoid stale closures inside WebSocket event listeners (like `onmessage` and `onclose`).
