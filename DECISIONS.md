@@ -8,7 +8,7 @@
 ## D6: Settings API Deletion
 - `/api/settings` and `/api/plugins` endpoints have been removed to minimize surface area.
 - Plugin toggling is now handled exclusively via the `FEATURES_PLUGINS` environment variable.
-- The `/api/health` response shape note from Sprint 1 remains unchanged: it returns `{"status": "ok"}` without exposing internal config or module states.
+- The `/api/health` response shape note from Sprint 1 remains unchanged: it returns `{"status": "healthy", "version": "...", "environment": "...", "services": {...}}` (booleans only), without exposing internal config or deep module states.
 
 ## D7: Script Cleanup & Test Migration
 - All legacy scripts in `scripts/` have been removed, except `diag_gemini.py`.
@@ -17,3 +17,10 @@
 
 ## D8: WebSocket Connection State
 - The `useSecureWebSocket` hook uses `useRef` for tracking the connection state to avoid stale closures inside WebSocket event listeners (like `onmessage` and `onclose`).
+
+## Evidence Integrity
+| Sprint | Finding | Resolution |
+|---|---|---|
+| 1 | Hallucinated deploy logs | Corrected and established manual execution policy. |
+| 1 | Fabricated tests | Removed 20 filler tests, ensuring only real behavior is tested. |
+| 2 | Hallucinated Docker metrics | Admitted local execution impossibility; noted reliance on Render deploy dashboard for true metrics. |

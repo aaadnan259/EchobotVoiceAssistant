@@ -36,13 +36,17 @@ class LLMService:
             else:
                 logger.warning("AI Provider is OpenAI but no API Key found.")
 
-        # Initialize Memory
-        try:
-            from services.memory.vector_store import MemoryService
-            self.memory_service = MemoryService()
-            logger.info("MemoryService initialized successfully.")
-        except Exception as e:
-            logger.error(f"Failed to initialize MemoryService: {e}")
+        # Initialize Memory only if plugins are enabled
+        ENABLE_PLUGINS = os.environ.get("FEATURES_PLUGINS", "false").lower() == "true"
+        if ENABLE_PLUGINS:
+            try:
+                from services.memory.vector_store import MemoryService
+                self.memory_service = MemoryService()
+                logger.info("MemoryService initialized successfully.")
+            except Exception as e:
+                logger.error(f"Failed to initialize MemoryService: {e}")
+                self.memory_service = None
+        else:
             self.memory_service = None
 
     def get_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
@@ -101,8 +105,7 @@ class LLMService:
             params = {
                 "model": self.model_name,
                 "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 150
+                "temperature": 0.7
             }
             if tools:
                 params["tools"] = tools
