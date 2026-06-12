@@ -1,5 +1,9 @@
-from elevenlabs.client import ElevenLabs
-from elevenlabs import stream
+try:
+    from elevenlabs.client import ElevenLabs
+    from elevenlabs import stream
+except ImportError:
+    ElevenLabs = None
+    stream = None
 from config.loader import ConfigLoader
 from utils.logger import logger
 

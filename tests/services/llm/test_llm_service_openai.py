@@ -1,10 +1,8 @@
 import pytest
-pytest.skip(reason="Pipeline B parked for Sprint 2", allow_module_level=True)
-import pytest
-
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, ANY
 import sys
+import json
 
 # Mock modules before importing LLMService
 # We need to mock these globally because they are imported at top level in LLMService
@@ -14,40 +12,42 @@ sys.modules['google'] = MagicMock()
 sys.modules['google.genai'] = MagicMock()
 sys.modules['openai'] = MagicMock()
 
+
 from services.llm.llm_service import LLMService, MockMessage
 
 class TestLLMServiceOpenAI(unittest.TestCase):
     def setUp(self):
+        # Setup module patching
+        self.mock_memory_module = MagicMock()
+        self.modules_patcher = patch.dict(sys.modules, {
+            'google': MagicMock(),
+            'google.genai': MagicMock(),
+            'openai': MagicMock(),
+            'services.memory.vector_store': self.mock_memory_module
+        })
+        self.modules_patcher.start()
+
         # Patch ConfigLoader
         self.mock_config_patcher = patch('services.llm.llm_service.ConfigLoader')
         self.mock_config = self.mock_config_patcher.start()
-
-        # Setup config side effects to simulate OpenAI provider
-        def config_side_effect(key, default=None):
-            if key == "ai.provider":
-                return "openai"
-            if key == "ai.openai_api_key":
-                return "fake_key"
-            return default
-        self.mock_config.get.side_effect = config_side_effect
 
         # Patch logger
         self.mock_logger_patcher = patch('services.llm.llm_service.logger')
         self.mock_logger = self.mock_logger_patcher.start()
 
-        # Mock MemoryService using patch.dict on sys.modules to isolate it
-        # This prevents the real MemoryService from running and failing,
-        # and avoids side effects on other tests.
-        self.memory_module_patcher = patch.dict(sys.modules, {'services.memory.vector_store': MagicMock()})
-        self.memory_module_patcher.start()
+        self.mock_client = MagicMock()
 
-        # Initialize service
+        # Initialize service with openai provider
+        self.mock_config.get.side_effect = lambda key, default=None: "openai" if key == "ai.provider" else "gemini-2.0-flash" if key == "ai.llm_model" else default
         self.service = LLMService()
+
+        # Set mocked client
+        self.service.client = self.mock_client
 
     def tearDown(self):
         self.mock_config_patcher.stop()
         self.mock_logger_patcher.stop()
-        self.memory_module_patcher.stop()
+        self.modules_patcher.stop()
 
     def test_openai_response_no_client(self):
         """Test response when OpenAI client is not connected."""

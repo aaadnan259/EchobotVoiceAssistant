@@ -1,54 +1,31 @@
-# test_gemini.py
 import os
 import sys
-from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 
-# Add current directory to path so we can import config if needed, 
-# but this script is standalone.
-sys.path.append(os.getcwd())
-
-load_dotenv()
-
-def test_gemini():
-    print("=== GEMINI CONNECTION TEST ===")
-    
-    # 1. Check API Key
-    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    
+def main():
+    api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
-        print("❌ No API key found in Environment (GEMINI_API_KEY or GOOGLE_API_KEY)!")
-        return False
-    
-    print(f"✓ API key found (length: {len(api_key)})")
-    
-    # 2. Configure Gemini
-    try:
-        genai.configure(api_key=api_key)
-        print("✓ Gemini configured")
-    except Exception as e:
-        print(f"❌ Configuration failed: {e}")
-        return False
+        print("ERROR: GOOGLE_API_KEY environment variable is not set.")
+        sys.exit(1)
 
-    # 3. Test Model
-    model_name = "gemini-2.0-flash"
-    print(f"Testing model: {model_name}...")
-    
+    print("Initializing Gemini Client...")
     try:
-        model = genai.GenerativeModel(model_name)
-        response = model.generate_content("Say 'Hello, I am working!' and nothing else.")
-        
-        if response.text:
-            print(f"✓ Response: {response.text}")
-            return True
-        else:
-            print("❌ Response was empty!")
-            return False
-            
+        client = genai.Client(api_key=api_key)
     except Exception as e:
-        print(f"❌ Error during generation: {e}")
-        return False
+        print(f"Failed to initialize client: {e}")
+        sys.exit(1)
+
+    print("Checking model availability for 'gemini-2.5-flash'...")
+    try:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents="Say 'Diagnostic successful: gemini-2.5-flash is available.' exactly as written."
+        )
+        print(f"\nResponse: {response.text}")
+    except Exception as e:
+        print(f"\nModel check failed: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    success = test_gemini()
-    sys.exit(0 if success else 1)
+    main()

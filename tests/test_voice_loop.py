@@ -1,5 +1,3 @@
-import pytest
-pytest.skip('Pipeline B parked for Sprint 2', allow_module_level=True)
 
 import sys
 from unittest.mock import MagicMock, AsyncMock, patch
@@ -7,32 +5,22 @@ import asyncio
 import pytest
 import os
 
-# Mock dependencies to avoid side effects during import
-sys.modules["services.plugin_manager"] = MagicMock()
-sys.modules["services.llm.llm_service"] = MagicMock()
-sys.modules["services.audio.tts"] = MagicMock()
-sys.modules["services.audio.voice_engine"] = MagicMock()
-sys.modules["google.genai"] = MagicMock()
-sys.modules["fastapi"] = MagicMock()
-sys.modules["fastapi.staticfiles"] = MagicMock()
-sys.modules["fastapi.templating"] = MagicMock()
-sys.modules["fastapi.middleware.cors"] = MagicMock()
-sys.modules["fastapi.responses"] = MagicMock()
-sys.modules["uvicorn"] = MagicMock()
-
-# We need to make sure we can import app
-# Since app.py imports these, we need to mock them properly.
-# The `app` object in app.py is FastAPI(). We mocked FastAPI, so app will be a MagicMock.
-
 # We need to set up sys.path
 sys.path.append(os.getcwd())
 
-# Import app
-try:
-    from web.backend import app
-except ImportError as e:
-    print(f"Failed to import app: {e}")
-    sys.exit(1)
+@pytest.fixture(autouse=True)
+def mock_dependencies(monkeypatch):
+    monkeypatch.setitem(sys.modules, "services.plugin_manager", MagicMock())
+    monkeypatch.setitem(sys.modules, "services.llm.llm_service", MagicMock())
+    monkeypatch.setitem(sys.modules, "services.audio.tts", MagicMock())
+    monkeypatch.setitem(sys.modules, "services.audio.voice_engine", MagicMock())
+    monkeypatch.setitem(sys.modules, "google.genai", MagicMock())
+    monkeypatch.setitem(sys.modules, "fastapi", MagicMock())
+    monkeypatch.setitem(sys.modules, "fastapi.staticfiles", MagicMock())
+    monkeypatch.setitem(sys.modules, "fastapi.middleware.cors", MagicMock())
+    monkeypatch.setitem(sys.modules, "fastapi.responses", MagicMock())
+    monkeypatch.setitem(sys.modules, "uvicorn", MagicMock())
+    yield
 
 @pytest.mark.asyncio
 async def test_run_voice_loop_refactor_success():
@@ -42,7 +30,7 @@ async def test_run_voice_loop_refactor_success():
     """
     # Setup mock voice engine
     mock_voice_engine = MagicMock()
-    # We need to set the global voice_engine in app
+    from web.backend import app
     app.voice_engine = mock_voice_engine
 
     # We mock wait_for_wake_word to return True first, then raise CancelledError to stop the loop
@@ -79,6 +67,7 @@ async def test_run_voice_loop_refactor_exception():
     Test that run_voice_loop handles exceptions by sleeping asynchronously.
     """
     mock_voice_engine = MagicMock()
+    from web.backend import app
     app.voice_engine = mock_voice_engine
 
     # Raise exception first, then CancelledError

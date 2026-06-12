@@ -28,5 +28,6 @@ Built with React, Vite, FastAPI, and the Gemini API.
 
 ## Architecture
 
-- **Backend:** FastAPI, `google-genai` SDK async endpoints, `itsdangerous` session tokens, WebSocket handling.
-- **Frontend:** React, TailwindCSS, Vite. Uses SSE and secure WebSockets.
+- **Backend:** FastAPI, `google-genai` SDK async endpoints, `itsdangerous` session tokens, WebSocket handling. Serves the compiled React frontend directly as a SPA and static PWA assets.
+- **Frontend:** React, TailwindCSS, Vite. Uses SSE and secure WebSockets. PWA Service Worker caching.
+- **Plugins:** Enabled via the `FEATURES_PLUGINS=true` environment variable.

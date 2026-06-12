@@ -1,7 +1,13 @@
-import speech_recognition as sr
-import pvporcupine
-import struct
-import pyaudio
+try:
+    import speech_recognition as sr
+    import pvporcupine
+    import struct
+    import pyaudio
+except ImportError:
+    sr = None
+    pvporcupine = None
+    struct = None
+    pyaudio = None
 import os
 from config.loader import ConfigLoader
 from utils.logger import logger
@@ -22,7 +28,7 @@ class VoiceEngine:
         self.pa = None
         self.audio_stream = None
         
-        if self.porcupine_key:
+        if self.porcupine_key and pvporcupine and pyaudio:
             try:
                 self.porcupine = pvporcupine.create(access_key=self.porcupine_key, keywords=["jarvis"])
                 self.pa = pyaudio.PyAudio()
@@ -36,6 +42,9 @@ class VoiceEngine:
                 logger.info("Wake word engine (Porcupine) initialized.")
             except Exception as e:
                 logger.error(f"Failed to init Porcupine: {e}")
+        else:
+            if self.porcupine_key:
+                logger.warning("Wake word key provided but audio dependencies are missing.")
 
     def _emit_status(self, status: str, **kwargs):
         if self.status_callback:

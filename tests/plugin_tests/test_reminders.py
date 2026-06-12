@@ -1,6 +1,4 @@
 import pytest
-pytest.skip(reason="Pipeline B parked for Sprint 2", allow_module_level=True)
-import pytest
 
 import unittest
 from unittest.mock import MagicMock, patch, ANY

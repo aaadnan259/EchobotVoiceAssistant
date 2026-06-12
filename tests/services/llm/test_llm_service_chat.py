@@ -1,39 +1,53 @@
 import pytest
-pytest.skip(reason="Pipeline B parked for Sprint 2", allow_module_level=True)
-import pytest
-
 import unittest
 from unittest.mock import MagicMock, patch, ANY
 import sys
+import json
 
 # Mock dependencies before importing LLMService
 sys.modules['google'] = MagicMock()
 sys.modules['google.genai'] = MagicMock()
 sys.modules['openai'] = MagicMock()
-# Mock memory service module to prevent ImportErrors
-sys.modules['services.memory.vector_store'] = MagicMock()
+
 
 from services.llm.llm_service import LLMService
 
 class TestLLMServiceChat(unittest.TestCase):
     def setUp(self):
+        # Setup module patching
+        self.mock_memory_module = MagicMock()
+        self.mock_client = MagicMock()
+        self.modules_patcher = patch.dict(sys.modules, {
+            'google': MagicMock(),
+            'google.genai': MagicMock(),
+            'openai': MagicMock(),
+            'services.memory.vector_store': self.mock_memory_module
+        })
+        self.modules_patcher.start()
+
+        from services.llm.llm_service import LLMService
+        self.LLMService = LLMService
+
         # Patch ConfigLoader to avoid reading real config
         self.mock_config_patcher = patch('services.llm.llm_service.ConfigLoader')
-        self.mock_config = self.mock_config_patcher.start()
+        self.mock_config = self.mock_config_patcher.start().return_value
 
         # Patch logger to suppress output
         self.mock_logger_patcher = patch('services.llm.llm_service.logger')
         self.mock_logger = self.mock_logger_patcher.start()
 
-        # Instantiate service
-        self.service = LLMService()
-
         # Manually set up a mock memory service for testing integration
         self.mock_memory_service = MagicMock()
+        
+        # Mock get_response to return a predictable response
+        # Initialize service with google provider
+        self.mock_config.get.side_effect = lambda key, default=None: "google" if key == "ai.provider" else "gemini-2.0-flash" if key == "ai.llm_model" else default
+        self.service = self.LLMService()
         self.service.memory_service = self.mock_memory_service
 
-        # Mock get_response to return a predictable response
-        # This isolates chat logic from provider logic
+        # Set mocked client
+        self.service.client = self.mock_client
+
         self.service.get_response = MagicMock()
         mock_response = MagicMock()
         mock_response.content = "I am a bot."
@@ -42,6 +56,7 @@ class TestLLMServiceChat(unittest.TestCase):
     def tearDown(self):
         self.mock_config_patcher.stop()
         self.mock_logger_patcher.stop()
+        self.modules_patcher.stop()
 
     def test_chat_uses_memory(self):
         """Test that chat retrieves memories and includes them in context."""

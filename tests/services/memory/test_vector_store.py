@@ -1,6 +1,4 @@
 import pytest
-pytest.skip(reason="Pipeline B parked for Sprint 2", allow_module_level=True)
-import pytest
 
 import unittest
 from unittest.mock import MagicMock, patch
@@ -49,9 +47,10 @@ class TestMemoryService(unittest.TestCase):
         # Import MemoryService inside the patched environment
         # If it was already imported, reload it to pick up the mocks
         import services.memory.vector_store
-        importlib.reload(services.memory.vector_store)
+        vector_store_module = sys.modules['services.memory.vector_store']
+        importlib.reload(vector_store_module)
 
-        self.MemoryService = services.memory.vector_store.MemoryService
+        self.MemoryService = vector_store_module.MemoryService
         self.service = self.MemoryService()
 
     def tearDown(self):

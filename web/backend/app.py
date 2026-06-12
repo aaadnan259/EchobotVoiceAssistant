@@ -1,13 +1,11 @@
-from fastapi import FastAPI, WebSocket, Request, HTTPException, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, Request, HTTPException, WebSocketDisconnect, Depends
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse
 import uvicorn
 import json
 import uuid
 import asyncio
-import threading
 from contextlib import asynccontextmanager
 from typing import List, Optional, Dict, Any
 import os
@@ -60,7 +58,8 @@ async def lifespan(app: FastAPI):
             if text:
                 asyncio.run_coroutine_threadsafe(handle_plugin_notification(text), loop)
 
-    plugin_manager.set_plugin_callback(plugin_callback_wrapper)
+    if plugin_manager:
+        plugin_manager.set_plugin_callback(plugin_callback_wrapper)
 
     voice_task = None
     if ConfigLoader.get("voice.enabled", False):
@@ -157,7 +156,6 @@ def build_gemini_contents(request: ChatRequest) -> list:
 
 RATE_LIMIT_CHAT = os.environ.get("RATE_LIMIT_CHAT", "10/minute")
 
-from fastapi import Depends
 from web.backend.auth import create_session_token, validate_session_token, SESSION_MAX_AGE
 
 @app.get("/api/session")
@@ -184,7 +182,10 @@ async def gemini_chat(chat_request: ChatRequest, request: Request, _token=Depend
 
     model = get_validated_model(chat_request.modelName)
     contents = build_gemini_contents(chat_request)
-    config_dict = {"system_instruction": chat_request.systemInstruction} if chat_request.systemInstruction else None
+    server_preamble = os.environ.get("SERVER_SYSTEM_PREAMBLE", "")
+    client_inst = (chat_request.systemInstruction or "")[:4000]
+    final_inst = f"{server_preamble}\n{client_inst}".strip()
+    config_dict = {"system_instruction": final_inst} if final_inst else None
 
     async def event_generator():
         try:
@@ -225,7 +226,10 @@ async def gemini_chat_simple(chat_request: ChatRequest, request: Request, _token
 
     model = get_validated_model(chat_request.modelName)
     contents = build_gemini_contents(chat_request)  # Now respects history + images
-    config_dict = {"system_instruction": chat_request.systemInstruction} if chat_request.systemInstruction else None
+    server_preamble = os.environ.get("SERVER_SYSTEM_PREAMBLE", "")
+    client_inst = (chat_request.systemInstruction or "")[:4000]
+    final_inst = f"{server_preamble}\n{client_inst}".strip()
+    config_dict = {"system_instruction": final_inst} if final_inst else None
 
     if hasattr(gemini_client, 'aio'):
         response = await gemini_client.aio.models.generate_content(
@@ -311,29 +315,18 @@ if dist_dir:
     else:
         logger.warning(f"Dist dir exists but index.html NOT found at: {index_path}")
 
-    # Mount assets
-    assets_dir = os.path.join(dist_dir, "assets")
-    if os.path.exists(assets_dir):
-         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
-
-
-else:
-    logger.warning("No build/dist directory found! Falling back to dev mode/templates.")
-    # Fallback/Dev
-    static_dir = os.path.join(web_dir, "static")
-    if os.path.exists(static_dir):
-        app.mount("/static", StaticFiles(directory=static_dir), name="static")
-
-    templates_dir = os.path.join(web_dir, "templates")
-    if os.path.exists(templates_dir):
-        templates = Jinja2Templates(directory=templates_dir)
+    logger.warning("No build/dist directory found! Ensure you have run 'npm run build'.")
 
 # Global Managers
-plugin_manager = PluginManager()
-plugin_manager.load_plugins()
+ENABLE_PLUGINS = os.environ.get("FEATURES_PLUGINS", "false").lower() == "true"
+plugin_manager = PluginManager() if ENABLE_PLUGINS else None
+if plugin_manager:
+    plugin_manager.load_plugins()
 
 # Initialize AI Services
 llm_service = LLMService()
+if not ENABLE_PLUGINS:
+    llm_service.memory_service = None  # Force disable ChromaDB/Memory
 tts_engine = TTSEngine()
 voice_engine = None
 
@@ -452,7 +445,7 @@ async def process_user_request(user_text: str, websocket: WebSocket = None):
         {"role": "user", "content": user_text}
     ]
     
-    tools = plugin_manager.get_tool_definitions()
+    tools = plugin_manager.get_tool_definitions() if plugin_manager else None
     
     response_message = await asyncio.to_thread(llm_service.get_response, messages, tools=tools)
     
@@ -507,64 +500,47 @@ async def process_user_request(user_text: str, websocket: WebSocket = None):
 
 
 # --- Routes ---
-@app.get("/")
-async def serve_spa_root(request: Request):
-    if dist_dir:
-        index_file = os.path.join(dist_dir, "index.html")
-        if os.path.exists(index_file):
-            return FileResponse(index_file)
-    if 'templates' in globals():
-         return templates.TemplateResponse(request=request, name="index.html")
-    return {"error": "Frontend build not found."}
-
-@app.get("/api/plugins")
-async def get_plugins():
-    return plugin_manager.get_all_plugins()
-
-class SettingsUpdate(BaseModel):
-    google_api_key: str = ""
-    voice_speed: float = 1.0
-    wake_word_sensitivity: float = 0.5
-
-@app.get("/api/settings")
-async def get_settings():
-    settings = ConfigLoader._settings.copy()
-
-    # Redact sensitive keys
-    if "ai" in settings:
-        settings["ai"] = settings["ai"].copy()
-        if "google_api_key" in settings["ai"]:
-            settings["ai"]["google_api_key"] = "REDACTED"
-        if "openai_api_key" in settings["ai"]:
-            settings["ai"]["openai_api_key"] = "REDACTED"
-
-    if "voice" in settings:
-        settings["voice"] = settings["voice"].copy()
-        if "elevenlabs_api_key" in settings["voice"]:
-            settings["voice"]["elevenlabs_api_key"] = "REDACTED"
-        if "porcupine_access_key" in settings["voice"]:
-            settings["voice"]["porcupine_access_key"] = "REDACTED"
-
-    if "plugins" in settings:
-        settings["plugins"] = settings["plugins"].copy()
-        if "openweather_api_key" in settings["plugins"]:
-            settings["plugins"]["openweather_api_key"] = "REDACTED"
-
-    return settings
-
-
-
 @app.get("/{full_path:path}")
-async def serve_spa_catchall(full_path: str, request: Request):
-    if full_path.startswith("api/") or full_path.startswith("assets/") or full_path.startswith("static/"):
+async def serve_spa(full_path: str, request: Request):
+    if full_path.startswith("api/") or full_path.startswith("ws"):
         raise HTTPException(status_code=404, detail="Not Found")
-    if dist_dir:
-        index_file = os.path.join(dist_dir, "index.html")
-        if os.path.exists(index_file):
-            return FileResponse(index_file)
-    if 'templates' in globals():
-         return templates.TemplateResponse(request=request, name="index.html")
-    return {"error": "Spa route not found"}
+        
+    if not dist_dir:
+        return JSONResponse(
+            status_code=500, 
+            content={"error": "Frontend not built \u2014 run npm run build"}
+        )
+
+    # 1. Path traversal guard
+    target_path = os.path.join(dist_dir, full_path) if full_path else os.path.join(dist_dir, "index.html")
+    real_target = os.path.realpath(target_path)
+    real_dist = os.path.realpath(dist_dir)
+    
+    if not real_target.startswith(real_dist):
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    # 2. Serve file if it exists, else fallback to index.html for SPA routing
+    if os.path.exists(real_target) and os.path.isfile(real_target):
+        file_to_serve = real_target
+    else:
+        file_to_serve = os.path.join(real_dist, "index.html")
+        if not os.path.exists(file_to_serve):
+            return JSONResponse(
+                status_code=500, 
+                content={"error": "Frontend not built \u2014 run npm run build"}
+            )
+
+    # 3. Cache-Control headers
+    headers = {}
+    if file_to_serve.endswith("index.html") or file_to_serve.endswith("sw.js"):
+        headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    elif "assets" in file_to_serve:
+        headers["Cache-Control"] = "public, max-age=31536000, immutable"
+
+    import mimetypes
+    media_type, _ = mimetypes.guess_type(file_to_serve)
+    
+    return FileResponse(file_to_serve, headers=headers, media_type=media_type)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

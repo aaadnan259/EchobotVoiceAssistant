@@ -115,6 +115,11 @@ export function useSecureWebSocket(
 
     // State
     const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
+    const connectionStateRef = useRef<ConnectionState>(connectionState);
+    useEffect(() => {
+        connectionStateRef.current = connectionState;
+    }, [connectionState]);
+
     const [sessionId, setSessionId] = useState<string | null>(null);
     const clientId = getClientId();
 
@@ -268,7 +273,7 @@ export function useSecureWebSocket(
                     }
 
                     // Handle regular messages (only if authenticated)
-                    if (connectionState === 'connected' || data.type === 'auth_response') {
+                    if (connectionStateRef.current === 'connected' || data.type === 'auth_response') {
                         onMessage?.(data);
                     }
                 } catch (e) {
@@ -320,7 +325,6 @@ export function useSecureWebSocket(
         maxReconnectAttempts,
         enableHeartbeat,
         heartbeatInterval,
-        connectionState,
     ]);
 
     // ==========================================================================

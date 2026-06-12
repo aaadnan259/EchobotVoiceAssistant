@@ -1,35 +1,37 @@
 import pytest
-pytest.skip(reason="Pipeline B parked for Sprint 2", allow_module_level=True)
-import pytest
 
 import sys
 import os
-import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch
+import pytest
+import datetime
 
 # Add repo root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-# Mock utils.logger before importing it
+# Mock dependencies to avoid errors during import
 mock_logger = MagicMock()
-sys.modules['utils.logger'] = mock_logger
-sys.modules['utils.logger'].logger = MagicMock()
+mock_config_loader = MagicMock()
+mock_config_loader.get = MagicMock(return_value=None)
+mock_sqlite3 = MagicMock()
 
-# Mock apscheduler before importing reminders
-sys.modules['apscheduler'] = MagicMock()
-sys.modules['apscheduler.schedulers'] = MagicMock()
-sys.modules['apscheduler.schedulers.background'] = MagicMock()
-sys.modules['apscheduler.triggers'] = MagicMock()
-sys.modules['apscheduler.triggers.date'] = MagicMock()
-
-# Mock yaml
-sys.modules['yaml'] = MagicMock()
-
-# Mock dotenv
-sys.modules['dotenv'] = MagicMock()
+@pytest.fixture(autouse=True)
+def mock_dependencies(monkeypatch):
+    monkeypatch.setitem(sys.modules, "utils.logger", mock_logger)
+    monkeypatch.setitem(sys.modules, "apscheduler", MagicMock())
+    monkeypatch.setitem(sys.modules, "apscheduler.schedulers", MagicMock())
+    monkeypatch.setitem(sys.modules, "apscheduler.schedulers.background", MagicMock())
+    monkeypatch.setitem(sys.modules, "apscheduler.triggers", MagicMock())
+    monkeypatch.setitem(sys.modules, "apscheduler.triggers.date", MagicMock())
+    monkeypatch.setitem(sys.modules, "colorama", MagicMock())
+    monkeypatch.setitem(sys.modules, "yaml", MagicMock())
+    monkeypatch.setitem(sys.modules, "config.loader", mock_config_loader)
+    monkeypatch.setitem(sys.modules, "sqlite3", mock_sqlite3)
+    yield
 
 from services.plugin_manager import PluginManager, Plugin
 from plugins.standard.reminders import ReminderPlugin
+import unittest
 
 class TestReminderCallback(unittest.TestCase):
     def setUp(self):

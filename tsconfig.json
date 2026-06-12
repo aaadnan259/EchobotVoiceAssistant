@@ -23,7 +23,6 @@
   },
   "include": ["src"],
   "exclude": [
-    "src/components/ui/**",
-    "src/components/ChatArea.tsx"
+    "src/components/ui/**"
   ]
 }

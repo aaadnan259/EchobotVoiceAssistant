@@ -1,23 +1,27 @@
 import pytest
-pytest.skip(reason="Pipeline B parked for Sprint 2", allow_module_level=True)
-import pytest
-
 import unittest
 from unittest.mock import MagicMock, patch, ANY
 import sys
-
-# We need to mock these before import because LLMService imports them at top level
-sys.modules['google'] = MagicMock()
-sys.modules['google.genai'] = MagicMock()
-sys.modules['openai'] = MagicMock()
-sys.modules['yaml'] = MagicMock()
-sys.modules['dotenv'] = MagicMock()
-sys.modules['colorama'] = MagicMock()
-
-from services.llm.llm_service import LLMService
+import json
 
 class TestLLMService(unittest.TestCase):
     def setUp(self):
+        # Setup module patching
+        self.mock_memory_module = MagicMock()
+        self.modules_patcher = patch.dict(sys.modules, {
+            'google': MagicMock(),
+            'google.genai': MagicMock(),
+            'openai': MagicMock(),
+            'yaml': MagicMock(),
+            'dotenv': MagicMock(),
+            'colorama': MagicMock(),
+            'services.memory.vector_store': self.mock_memory_module
+        })
+        self.modules_patcher.start()
+
+        from services.llm.llm_service import LLMService
+        self.LLMService = LLMService
+
         # Patch ConfigLoader
         self.mock_config_patcher = patch('services.llm.llm_service.ConfigLoader')
         self.mock_config = self.mock_config_patcher.start()
@@ -28,6 +32,8 @@ class TestLLMService(unittest.TestCase):
                 return "google"
             if key == "ai.google_api_key":
                 return "fake_key"
+            if key == "ai.llm_model":
+                return "gemini-2.0-flash"
             return default
         self.mock_config.get.side_effect = config_side_effect
 
@@ -42,18 +48,15 @@ class TestLLMService(unittest.TestCase):
         self.mock_logger_patcher = patch('services.llm.llm_service.logger')
         self.mock_logger = self.mock_logger_patcher.start()
 
-        # Mock MemoryService using patch.dict on sys.modules to isolate it
-        self.memory_module_patcher = patch.dict(sys.modules, {'services.memory.vector_store': MagicMock()})
-        self.memory_module_patcher.start()
-
         # Initialize service
-        self.service = LLMService()
+        self.service = self.LLMService()
+        self.service.client = self.mock_client
 
     def tearDown(self):
         self.mock_config_patcher.stop()
         self.mock_genai_patcher.stop()
         self.mock_logger_patcher.stop()
-        self.memory_module_patcher.stop()
+        self.modules_patcher.stop()
 
     def test_google_response_success(self):
         """Test successful response from Google Gemini with detailed argument verification."""
