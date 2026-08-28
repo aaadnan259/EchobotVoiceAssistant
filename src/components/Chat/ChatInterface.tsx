@@ -18,10 +18,17 @@ import { useChatContext } from '../../contexts/ChatContext';
 import { useUI } from '../../contexts/UIContext';
 import { useSettings } from '../../hooks';
 import { useScrollBehavior, useAudioAnalyzer, useKeyboardShortcuts } from '../../hooks';
-import { CHAT_MESSAGES } from '../../constants';
+import { CHAT_MESSAGES, MESSAGE_LIMITS } from '../../constants';
 
 const { SUCCESS, ERRORS, CONFIRMATIONS } = CHAT_MESSAGES;
-const VIRTUALIZATION_THRESHOLD = 50;
+// VirtualizedMessageList currently renders blank: its AutoSizer parent
+// (`w-full h-full` inside this component's naturally-flowing, non-fixed-
+// height layout) never resolves a real height, so react-window has nothing
+// to measure. Fixing that needs a layout restructure of this file, tracked
+// as a separate follow-up rather than bundled into the scroll-restoration
+// fix. Until then, keep the threshold above MAX_STORED_MESSAGES so every
+// conversation uses the confirmed-working SimpleMessageList path.
+const VIRTUALIZATION_THRESHOLD = MESSAGE_LIMITS.MAX_STORED_MESSAGES + 1;
 
 export const ChatInterface: React.FC = () => {
     const {

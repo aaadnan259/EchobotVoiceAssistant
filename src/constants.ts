@@ -87,6 +87,12 @@ export const UI_CONFIG = {
     /** Scroll distance (px) for orb animation progress */
     ORB_SCROLL_DISTANCE: 200,
 
+    /** Distance (px) from the bottom of the chat scroll container within which
+     *  the user is considered "at the bottom" for auto-scroll purposes. Within
+     *  this threshold, new/updated messages auto-scroll the view; beyond it,
+     *  the user is treated as intentionally reading history and is left alone. */
+    NEAR_BOTTOM_THRESHOLD: 120,
+
     /** Default theme */
     DEFAULT_THEME: 'dark' as const,
 

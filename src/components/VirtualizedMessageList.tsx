@@ -1,21 +1,32 @@
 import React, { useRef, useEffect, useCallback, memo } from 'react';
 import { ListChildComponentProps } from 'react-window';
 
-// react-window v2 has mixed CJS/ESM exports - use dynamic resolution
+// react-window's CJS/ESM interop can expose VariableSizeList either as a
+// named export or nested under `default`, depending on how the bundler
+// resolves it - check both, preferring the named export since that's what
+// the installed version (react-window@1.8.x) actually provides.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import * as ReactWindowModule from 'react-window';
 const List = (ReactWindowModule as any).VariableSizeList ??
     (ReactWindowModule as any).default?.VariableSizeList;
 
-// react-virtualized-auto-sizer has default export issues in production
+// react-virtualized-auto-sizer@2.x's real component is the named `AutoSizer`
+// export; `.default` (when present) is a synthetic module-namespace object
+// from ESM/CJS interop, NOT the component itself. Rendering that object
+// directly throws "Element type is invalid: ... but got: object" - so the
+// named export must be checked first, with `.default` only as a fallback
+// for builds where the named export isn't picked up.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 import * as AutoSizerModule from 'react-virtualized-auto-sizer';
-const AutoSizer = (AutoSizerModule as any).default ?? AutoSizerModule;
+const AutoSizer = (AutoSizerModule as any).AutoSizer ?? (AutoSizerModule as any).default;
 
 import { Message } from '../types';
 import MessageBubble from './MessageBubble';
 import { MessageErrorBoundary } from './ErrorBoundaries';
 import { TypingIndicator } from './TypingIndicator';
+import { UI_CONFIG } from '../constants';
+
+const { NEAR_BOTTOM_THRESHOLD } = UI_CONFIG;
 
 interface VirtualizedMessageListProps {
     messages: Message[];
@@ -121,7 +132,28 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     isTyping
 }) => {
     const listRef = useRef<any>(null);
+    const outerRef = useRef<HTMLDivElement>(null);
     const heightCacheRef = useRef<Map<string, number>>(itemHeightCache);
+
+    // Same "is the user near the bottom" tracking as the non-virtualized list
+    // (useScrollBehavior), applied to react-window's own internal scroll
+    // container (accessed via outerRef, since a virtualized list scrolls
+    // itself rather than relying on an ancestor's overflow).
+    const isNearBottomRef = useRef(true);
+    const hasScrolledOnceRef = useRef(false);
+
+    useEffect(() => {
+        const el = outerRef.current;
+        if (!el) return;
+
+        const handleScroll = () => {
+            const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+            isNearBottomRef.current = distanceFromBottom < NEAR_BOTTOM_THRESHOLD;
+        };
+
+        el.addEventListener('scroll', handleScroll, { passive: true });
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Get item height from cache or return estimate
     const getItemHeight = useCallback((index: number): number => {
@@ -166,10 +198,18 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
         }
     }, [messages]);
 
-    // Auto-scroll to bottom when messages change
+    // Auto-scroll to bottom when messages change - always on initial mount,
+    // and afterward only if the user was already near the bottom (so a new
+    // message doesn't yank someone back down while they're reading history).
     useEffect(() => {
-        if (autoScrollToBottom && listRef.current && messages.length > 0) {
-            // Use requestAnimationFrame for smooth scrolling
+        if (!autoScrollToBottom || !listRef.current || messages.length === 0) return;
+
+        const shouldScroll = !hasScrolledOnceRef.current || isNearBottomRef.current;
+        hasScrolledOnceRef.current = true;
+
+        if (shouldScroll) {
+            // requestAnimationFrame lets react-window finish committing row
+            // layout first, so scrollToItem measures against final sizes.
             requestAnimationFrame(() => {
                 listRef.current?.scrollToItem(messages.length - 1, 'end');
             });
@@ -226,6 +266,7 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
                 {({ height, width }: { height: number; width: number }) => (
                     <List
                         ref={listRef}
+                        outerRef={outerRef}
                         height={height}
                         width={width}
                         itemCount={messages.length + (isTyping ? 1 : 0)}
