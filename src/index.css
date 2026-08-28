@@ -13,6 +13,12 @@
   --blur-md: 12px;
   --blur-xl: 24px;
   --blur-3xl: 64px;
+
+  /* Matches the CDN Tailwind config's fontFamily.sans override being
+   * removed from index.html - without this, the `font-sans` utility class
+   * (used by ShortcutsModal's <kbd> elements) would fall back to Tailwind's
+   * default sans stack instead of Inter. */
+  --font-sans: 'Inter', sans-serif;
 }
 
 @layer base {
