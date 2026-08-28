@@ -32,11 +32,13 @@ function setScrollMetrics(
     Object.defineProperty(el, 'clientHeight', { configurable: true, value: clientHeight });
 }
 
+type ScrollIntoViewFn = (arg?: boolean | ScrollIntoViewOptions) => void;
+
 describe('useScrollBehavior', () => {
-    let scrollIntoViewMock: ReturnType<typeof vi.fn>;
+    let scrollIntoViewMock: ReturnType<typeof vi.fn<ScrollIntoViewFn>>;
 
     beforeEach(() => {
-        scrollIntoViewMock = vi.fn();
+        scrollIntoViewMock = vi.fn<ScrollIntoViewFn>();
         window.HTMLElement.prototype.scrollIntoView = scrollIntoViewMock;
     });
 
