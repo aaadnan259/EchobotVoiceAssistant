@@ -1,6 +1,16 @@
 import { Message } from "../types";
 import { logger } from "../utils/logger";
-import { getToken } from "./sessionService";
+import { getToken, refreshToken } from "./sessionService";
+
+// Ensures at most one token refresh is in flight at a time, even if a 401
+// from streamGeminiResponse and getGeminiResponse happen concurrently.
+let refreshInFlight: Promise<string> | null = null;
+function refreshTokenOnce(): Promise<string> {
+  if (!refreshInFlight) {
+    refreshInFlight = refreshToken().finally(() => { refreshInFlight = null; });
+  }
+  return refreshInFlight;
+}
 
 /**
  * Streams response from Gemini via backend proxy.
@@ -12,30 +22,39 @@ export async function* streamGeminiResponse(
   newMessage: string,
   images?: string[]
 ): AsyncGenerator<string, void, unknown> {
-  const token = await getToken();
-  const response = await fetch('/api/gemini/chat', {
+  const requestBody = JSON.stringify({
+    modelName,
+    systemInstruction,
+    history: history.map(msg => ({
+      role: msg.role,
+      text: msg.text
+    })),
+    newMessage,
+    images
+  });
+
+  const doRequest = (token: string) => fetch('/api/gemini/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({
-      modelName,
-      systemInstruction,
-      history: history.map(msg => ({
-        role: msg.role,
-        text: msg.text
-      })),
-      newMessage,
-      images
-    }),
+    body: requestBody,
   });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      const { refreshToken } = await import('./sessionService');
-      refreshToken().catch(e => logger.error('Background token refresh failed', e));
+  let token = await getToken();
+  let response = await doRequest(token);
+
+  if (response.status === 401) {
+    try {
+      token = await refreshTokenOnce();
+      response = await doRequest(token);
+    } catch (e) {
+      logger.error('Token refresh failed after 401', e);
     }
+  }
+
+  if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
@@ -101,30 +120,39 @@ export async function getGeminiResponse(
   newMessage: string,
   images?: string[]
 ): Promise<string> {
-  const token = await getToken();
-  const response = await fetch('/api/gemini/chat-simple', {
+  const requestBody = JSON.stringify({
+    modelName,
+    systemInstruction,
+    history: history.map(msg => ({
+      role: msg.role,
+      text: msg.text
+    })),
+    newMessage,
+    images
+  });
+
+  const doRequest = (token: string) => fetch('/api/gemini/chat-simple', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
     },
-    body: JSON.stringify({
-      modelName,
-      systemInstruction,
-      history: history.map(msg => ({
-        role: msg.role,
-        text: msg.text
-      })),
-      newMessage,
-      images
-    }),
+    body: requestBody,
   });
 
-  if (!response.ok) {
-    if (response.status === 401) {
-      const { refreshToken } = await import('./sessionService');
-      refreshToken().catch(e => logger.error('Background token refresh failed', e));
+  let token = await getToken();
+  let response = await doRequest(token);
+
+  if (response.status === 401) {
+    try {
+      token = await refreshTokenOnce();
+      response = await doRequest(token);
+    } catch (e) {
+      logger.error('Token refresh failed after 401', e);
     }
+  }
+
+  if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
