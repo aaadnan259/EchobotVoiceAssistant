@@ -314,7 +314,7 @@ if dist_dir:
         logger.info(f"Found index.html at: {index_path}")
     else:
         logger.warning(f"Dist dir exists but index.html NOT found at: {index_path}")
-
+else:
     logger.warning("No build/dist directory found! Ensure you have run 'npm run build'.")
 
 # Global Managers
