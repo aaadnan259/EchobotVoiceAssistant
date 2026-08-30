@@ -252,6 +252,10 @@ is_prod = os.environ.get("RENDER") is not None
 if is_prod:
     frontend_url = os.environ.get("FRONTEND_URL", "").strip()
     ALLOWED_ORIGINS = [frontend_url] if frontend_url else []
+    if not ALLOWED_ORIGINS:
+        logger.warning(
+            "FRONTEND_URL is not set in production; CORS will deny all cross-origin requests."
+        )
 else:
     ALLOWED_ORIGINS = [
         "http://localhost:3000",
@@ -264,7 +268,11 @@ else:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o for o in ALLOWED_ORIGINS if o] if ALLOWED_ORIGINS else ["*"],
+    # NOTE: no wildcard fallback here. An empty ALLOWED_ORIGINS list (e.g. production
+    # with FRONTEND_URL unset/empty) must resolve to an explicit deny-all, not "*" -
+    # Starlette's CORSMiddleware combined with allow_credentials=True reflects the
+    # request's Origin header when "*" is present, which fails open for any origin.
+    allow_origins=[o for o in ALLOWED_ORIGINS if o],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
