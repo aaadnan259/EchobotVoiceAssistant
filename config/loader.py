@@ -55,9 +55,10 @@ class ConfigLoader:
             logger.debug(f"GEMINI_MODEL env var found! Overriding to: {env_model}")
             cls._settings.setdefault("ai", {})["llm_model"] = env_model
         else:
-            # Default to gemini-2.0-flash if not set in env or yaml
+            # Default to gemini-2.5-flash if not set in env or yaml
+            # (gemini-2.0-flash has been retired; see F3 remediation)
             if "ai" in cls._settings and "llm_model" not in cls._settings.get("ai", {}):
-                cls._settings.setdefault("ai", {})["llm_model"] = "gemini-2.0-flash"
+                cls._settings.setdefault("ai", {})["llm_model"] = "gemini-2.5-flash"
             logger.debug(f"Using model from settings: {cls._settings.get('ai', {}).get('llm_model')}")
         if os.getenv("PORCUPINE_ACCESS_KEY"):
             cls._settings.setdefault("voice", {})["porcupine_access_key"] = os.getenv("PORCUPINE_ACCESS_KEY")

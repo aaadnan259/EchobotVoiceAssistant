@@ -15,3 +15,11 @@ build/
 *.log
 *.sqlite
 *.sqlite3
+
+# Stray generated artifacts that were committed before these ignore rules
+# existed (F5 remediation) -- untracked via git rm --cached, now ignored.
+build_output.txt
+pytest_output.txt
+typecheck_output.txt
+vitest_output.txt
+models/intent_model.pkl

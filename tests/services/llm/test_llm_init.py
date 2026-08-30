@@ -1,5 +1,6 @@
 import pytest
 
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 import sys
@@ -78,6 +79,17 @@ class TestLLMServiceInit(unittest.TestCase):
         service = self.LLMService()
         self.assertEqual(service.model_name, "gemini-2.5-flash")
 
+    def test_default_model_name_fallback(self):
+        """Test model_name falls back to the current (non-retired) model when
+        ConfigLoader has no configured value for ai.llm_model at all -- the exact
+        double-fallback scenario F3 addresses. gemini-2.0-flash is retired and must
+        never be the resolved value here."""
+        self.mock_config.get.side_effect = lambda key, default=None: default
+
+        service = self.LLMService()
+
+        self.assertEqual(service.model_name, "gemini-2.5-flash")
+
     def test_google_client_init(self):
         """Test Google Client initialization."""
         def config_side_effect(key, default=None):
@@ -90,7 +102,7 @@ class TestLLMServiceInit(unittest.TestCase):
 
         self.mock_genai.Client.assert_called_once_with(api_key="fake_google_key")
         self.assertIsNotNone(service.client)
-        self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-2.0-flash")
+        self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-2.5-flash")
 
     def test_openai_client_init(self):
         """Test OpenAI Client initialization."""
@@ -132,21 +144,31 @@ class TestLLMServiceInit(unittest.TestCase):
         self.mock_logger.warning.assert_called_with("AI Provider is OpenAI but no API Key found.")
 
     def test_memory_service_init_success(self):
-        """Test successful MemoryService initialization."""
+        """Test successful MemoryService initialization.
+
+        Sets FEATURES_PLUGINS explicitly within this test's own scope (F7) rather
+        than relying on ambient environment state, so this test passes regardless
+        of what the ambient default happens to be."""
         mock_instance = MagicMock()
         self.mock_memory_service_cls.return_value = mock_instance
 
-        service = self.LLMService()
+        with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
+            service = self.LLMService()
 
         self.mock_memory_service_cls.assert_called_once()
         self.assertEqual(service.memory_service, mock_instance)
         self.mock_logger.info.assert_any_call("MemoryService initialized successfully.")
 
     def test_memory_service_init_failure(self):
-        """Test MemoryService initialization failure."""
+        """Test MemoryService initialization failure.
+
+        Sets FEATURES_PLUGINS explicitly within this test's own scope (F7) rather
+        than relying on ambient environment state, so this test passes regardless
+        of what the ambient default happens to be."""
         self.mock_memory_service_cls.side_effect = Exception("Memory Error")
 
-        service = self.LLMService()
+        with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
+            service = self.LLMService()
 
         self.assertIsNone(service.memory_service)
         # Check that error was logged. The exact message contains the exception.
