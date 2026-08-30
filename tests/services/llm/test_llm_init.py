@@ -1,5 +1,6 @@
 import pytest
 
+import os
 import unittest
 from unittest.mock import MagicMock, patch
 import sys
@@ -143,21 +144,31 @@ class TestLLMServiceInit(unittest.TestCase):
         self.mock_logger.warning.assert_called_with("AI Provider is OpenAI but no API Key found.")
 
     def test_memory_service_init_success(self):
-        """Test successful MemoryService initialization."""
+        """Test successful MemoryService initialization.
+
+        Sets FEATURES_PLUGINS explicitly within this test's own scope (F7) rather
+        than relying on ambient environment state, so this test passes regardless
+        of what the ambient default happens to be."""
         mock_instance = MagicMock()
         self.mock_memory_service_cls.return_value = mock_instance
 
-        service = self.LLMService()
+        with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
+            service = self.LLMService()
 
         self.mock_memory_service_cls.assert_called_once()
         self.assertEqual(service.memory_service, mock_instance)
         self.mock_logger.info.assert_any_call("MemoryService initialized successfully.")
 
     def test_memory_service_init_failure(self):
-        """Test MemoryService initialization failure."""
+        """Test MemoryService initialization failure.
+
+        Sets FEATURES_PLUGINS explicitly within this test's own scope (F7) rather
+        than relying on ambient environment state, so this test passes regardless
+        of what the ambient default happens to be."""
         self.mock_memory_service_cls.side_effect = Exception("Memory Error")
 
-        service = self.LLMService()
+        with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
+            service = self.LLMService()
 
         self.assertIsNone(service.memory_service)
         # Check that error was logged. The exact message contains the exception.
