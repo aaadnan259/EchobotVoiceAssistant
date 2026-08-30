@@ -6,6 +6,7 @@ import uvicorn
 import json
 import uuid
 import asyncio
+import time
 from contextlib import asynccontextmanager
 from typing import List, Optional, Dict, Any
 import os
@@ -28,6 +29,25 @@ from services.llm.llm_service import LLMService
 # Global state
 voice_engine = None
 gemini_client = None
+
+# Cached "last known good" LLM signal (F6). Updated opportunistically by the two
+# real chat endpoints (gemini_chat, gemini_chat_simple) whenever they call the real
+# gemini_client -- no new outbound call is made solely for health-checking purposes.
+# NOT updated by llm_service/process_user_request: that path is never reached by the
+# deployed web server (see Workstream 5 investigation), so tracking it would track a
+# signal that never fires. A single tuple is used (not two separate variables) so
+# each update is one atomic Python statement, with no intervening `await` -- see the
+# Workstream 4 implementation report for the full concurrency reasoning.
+_llm_last_attempt: Optional[tuple] = None  # (monotonic_timestamp: float, succeeded: bool)
+LLM_HEALTH_RECENCY_WINDOW_SECONDS = 300  # 5 minutes
+
+def _record_llm_attempt(success: bool) -> None:
+    """Record the outcome of a real Gemini call from the live chat endpoints only.
+    Must only ever be called from the awaiting coroutine (never from inside a
+    callable passed to asyncio.to_thread) so this mutation always happens on the
+    single event-loop thread."""
+    global _llm_last_attempt
+    _llm_last_attempt = (time.monotonic(), success)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -210,8 +230,10 @@ async def gemini_chat(chat_request: ChatRequest, request: Request, _token=Depend
                         yield f"data: {json.dumps({'text': chunk.text})}\n\n"
                         await asyncio.sleep(0)
                         
+            _record_llm_attempt(True)
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
+            _record_llm_attempt(False)
             logger.error(f"Gemini Streaming Error: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
@@ -231,19 +253,28 @@ async def gemini_chat_simple(chat_request: ChatRequest, request: Request, _token
     final_inst = f"{server_preamble}\n{client_inst}".strip()
     config_dict = {"system_instruction": final_inst} if final_inst else None
 
-    if hasattr(gemini_client, 'aio'):
-        response = await gemini_client.aio.models.generate_content(
-            model=model,
-            contents=contents,
-            config=config_dict,
-        )
-    else:
-        response = await asyncio.to_thread(
-            gemini_client.models.generate_content,
-            model=model,
-            contents=contents,
-            config=config_dict,
-        )
+    try:
+        if hasattr(gemini_client, 'aio'):
+            response = await gemini_client.aio.models.generate_content(
+                model=model,
+                contents=contents,
+                config=config_dict,
+            )
+        else:
+            response = await asyncio.to_thread(
+                gemini_client.models.generate_content,
+                model=model,
+                contents=contents,
+                config=config_dict,
+            )
+    except Exception:
+        # Record the outcome for the health signal (F6) and re-raise the exact
+        # original exception unchanged -- this endpoint's error-response shape
+        # (a generic FastAPI 500 with no leaked detail) is F4's territory and is
+        # deliberately not touched here.
+        _record_llm_attempt(False)
+        raise
+    _record_llm_attempt(True)
     return {"text": response.text}
 
 
@@ -278,6 +309,20 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],
 )
 
+def _llm_health_signal() -> bool:
+    """F6: report a recency-bounded real call outcome when one exists, falling back
+    to the original startup-time proxy (gemini_client is not None) both when no chat
+    attempt has been made yet this process lifetime, and when the last one is older
+    than the recency window (so a single old failure cannot haunt this field
+    forever once it's stale). No new outbound network call is made here or anywhere
+    else in this function -- this only reads already-recorded in-process state."""
+    if _llm_last_attempt is None:
+        return gemini_client is not None
+    last_at, last_ok = _llm_last_attempt
+    if (time.monotonic() - last_at) <= LLM_HEALTH_RECENCY_WINDOW_SECONDS:
+        return last_ok
+    return gemini_client is not None
+
 @app.get("/api/health")
 async def health_check():
     return {
@@ -285,7 +330,7 @@ async def health_check():
         "version": "1.0",
         "environment": "production" if is_prod else "development",
         "services": {
-            "llm": gemini_client is not None,
+            "llm": _llm_health_signal(),
             "tts": tts_engine.is_available if tts_engine else False,
             "voice": voice_engine is not None
         }
