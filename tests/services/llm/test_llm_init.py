@@ -78,6 +78,17 @@ class TestLLMServiceInit(unittest.TestCase):
         service = self.LLMService()
         self.assertEqual(service.model_name, "gemini-2.5-flash")
 
+    def test_default_model_name_fallback(self):
+        """Test model_name falls back to the current (non-retired) model when
+        ConfigLoader has no configured value for ai.llm_model at all -- the exact
+        double-fallback scenario F3 addresses. gemini-2.0-flash is retired and must
+        never be the resolved value here."""
+        self.mock_config.get.side_effect = lambda key, default=None: default
+
+        service = self.LLMService()
+
+        self.assertEqual(service.model_name, "gemini-2.5-flash")
+
     def test_google_client_init(self):
         """Test Google Client initialization."""
         def config_side_effect(key, default=None):
@@ -90,7 +101,7 @@ class TestLLMServiceInit(unittest.TestCase):
 
         self.mock_genai.Client.assert_called_once_with(api_key="fake_google_key")
         self.assertIsNotNone(service.client)
-        self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-2.0-flash")
+        self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-2.5-flash")
 
     def test_openai_client_init(self):
         """Test OpenAI Client initialization."""
