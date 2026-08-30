@@ -14,4 +14,23 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
+      # The following were added at different points across this remediation
+      # project with safe code-level defaults, but were never back-filled into
+      # this declared list (F9). Declaring them here does not change runtime
+      # behavior -- it makes them visible/discoverable and gives any manually-set
+      # value in the Render dashboard a version-controlled record of its existence.
+      - key: RATE_LIMIT_CHAT
+        sync: false
+      - key: SESSION_MAX_AGE
+        sync: false
+      - key: GEMINI_ALLOWED_MODELS
+        sync: false
+      - key: GEMINI_MODEL
+        sync: false
+      - key: MAX_WS_PER_IP
+        sync: false
+      - key: FEATURES_PLUGINS
+        sync: false
+      - key: SERVER_SYSTEM_PREAMBLE
+        sync: false
     healthCheckPath: /api/health
