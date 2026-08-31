@@ -90,6 +90,62 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'build',
+    rollupOptions: {
+      output: {
+        // Data-driven split (F15): measured with rollup-plugin-visualizer against
+        // the dd07a60 baseline. @sentry/* + @sentry-internal/* and the react-markdown
+        // parsing ecosystem (micromark/mdast-util/unist-util/remark-*/hast-util-*/vfile*
+        // and their small shared helpers) together account for ~71% of non-app rendered
+        // bytes and are the two dominant contributors to the >500kB chunk warning.
+        // Splitting just these two out is sufficient to bring every chunk under the
+        // threshold without regrouping react/react-dom or anything else. See
+        // EchoBot_Phase6_Workstream6_Plan_2026-08-31.md §3/§13 for the measurement.
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+
+          if (id.includes('node_modules/@sentry')) {
+            // Matches both @sentry/* and @sentry-internal/* (the latter also
+            // starts with the substring "@sentry").
+            return 'vendor-sentry';
+          }
+
+          const match = id.match(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/);
+          const pkg = match ? match[1] : null;
+          const isMarkdownEcosystem =
+            pkg === 'react-markdown' ||
+            pkg === 'property-information' ||
+            pkg === 'unified' ||
+            pkg === 'trough' ||
+            pkg === 'bail' ||
+            pkg === 'devlop' ||
+            pkg === 'decode-named-character-reference' ||
+            pkg === 'html-url-attributes' ||
+            pkg === 'space-separated-tokens' ||
+            pkg === 'comma-separated-tokens' ||
+            pkg === 'estree-util-is-identifier-name' ||
+            pkg === 'is-plain-obj' ||
+            pkg === 'style-to-js' ||
+            pkg === 'style-to-object' ||
+            pkg === 'inline-style-parser' ||
+            pkg === 'trim-lines' ||
+            pkg === 'extend' ||
+            pkg === '@ungap/structured-clone' ||
+            (pkg != null &&
+              (pkg.startsWith('micromark') ||
+                pkg.startsWith('mdast-util') ||
+                pkg.startsWith('unist-util') ||
+                pkg.startsWith('remark-') ||
+                pkg.startsWith('hast-util') ||
+                pkg.startsWith('vfile')));
+
+          if (isMarkdownEcosystem) {
+            return 'vendor-markdown';
+          }
+
+          return undefined;
+        },
+      },
+    },
   },
 
   server: {
