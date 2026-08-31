@@ -119,9 +119,6 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         settings
     });
 
-    // --- Audio Refs ---
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-
     // --- Voice Logic ---
     const { isListening, isSupported: isSpeechSupported, toggleListening } = useSpeechRecognition({
         onResult: (transcript) => setInputValue(transcript),
@@ -149,37 +146,19 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     useSecureWebSocket({
         onConnect: () => toast.success(SUCCESS.CONNECTED),
         onMessage: (data) => {
+            // NOTE (WS5/F8): the status/text/audio branches that used to live here
+            // were removed. Nothing in the deployed backend can ever send those
+            // shapes -- they were only ever emitted by the voice-loop
+            // (process_user_request/run_voice_loop, gated by voice.enabled, always
+            // False) and the plugin-notification path (handle_plugin_notification,
+            // gated by a reminder-scheduler callback that nothing in the backend
+            // ever triggers). See EchoBot_Phase6_Workstream5_Plan_2026-08-30.md for
+            // the full reachability proof. Only the generic error frame -- sent
+            // directly by websocket_endpoint for auth failures and unrecognized
+            // message types -- is live and kept below.
             if (data.type === 'error') {
                 toast.error(data.text || 'WebSocket error');
                 return;
-            }
-
-            if (data.status) {
-                const statusMap: Record<string, OrbState> = {
-                    'listening': OrbState.LISTENING,
-                    'processing': OrbState.THINKING,
-                    'speaking': OrbState.RESPONDING,
-                    'idle': OrbState.IDLE
-                };
-                if (statusMap[data.status]) {
-                    setOrbState(statusMap[data.status]);
-                }
-                return;
-            }
-
-            if (data.text) {
-                addMessage({ role: 'model', text: data.text });
-                playSound('RECEIVE');
-            }
-
-            if (data.audio) {
-                setOrbState(OrbState.RESPONDING);
-                if (audioRef.current) audioRef.current.pause();
-                const audioSrc = 'data:audio/mpeg;base64,' + data.audio;
-                const audio = new Audio(audioSrc);
-                audioRef.current = audio;
-                audio.onended = () => setOrbState(OrbState.IDLE);
-                audio.play().catch(e => logger.error('Audio playback failed:', e));
             }
         }
     });

@@ -22,7 +22,6 @@ from fastapi.responses import JSONResponse
 from config.loader import ConfigLoader
 from services.plugin_manager import PluginManager
 from services.audio.tts import TTSEngine
-from services.audio.voice_engine import VoiceEngine
 from utils.logger import logger
 from services.llm.llm_service import LLMService
 
@@ -52,11 +51,7 @@ def _record_llm_attempt(success: bool) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager for startup/shutdown."""
-    global voice_engine, gemini_client
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = None
+    global gemini_client
 
     # Initialize Gemini Client
     api_key = ConfigLoader.get("ai.google_api_key")
@@ -67,40 +62,15 @@ async def lifespan(app: FastAPI):
         except Exception as e:
              logger.error(f"Failed to initialize Shared Gemini Client: {e}")
 
-    def status_callback(status, **kwargs):
-        payload = {"status": status, **kwargs}
-        if manager.active_connections and loop:
-            asyncio.run_coroutine_threadsafe(manager.broadcast(json.dumps(payload)), loop)
+    # NOTE (WS5/F8): this used to also wire a plugin-notification callback and
+    # conditionally start a voice-input asyncio task here. Both were proven fully
+    # unreachable in the deployed web server (see
+    # EchoBot_Phase6_Workstream5_Plan_2026-08-30.md) and were removed along with
+    # process_user_request/run_voice_loop/handle_plugin_notification below.
+    # voice_engine stays permanently None, matching its already-always-False
+    # effective value in production before this change.
 
-    def plugin_callback_wrapper(event_type, data):
-        if event_type == "notification" and loop:
-            text = data.get("text")
-            if text:
-                asyncio.run_coroutine_threadsafe(handle_plugin_notification(text), loop)
-
-    if plugin_manager:
-        plugin_manager.set_plugin_callback(plugin_callback_wrapper)
-
-    voice_task = None
-    if ConfigLoader.get("voice.enabled", False):
-        try:
-            voice_engine = VoiceEngine(status_callback=status_callback)
-            # Start as asyncio Task instead of thread
-            voice_task = asyncio.create_task(run_voice_loop())
-            logger.info("Voice Input Task Started")
-        except Exception as e:
-            logger.error(f"Failed to start voice engine: {e}")
-    
     yield  # App runs here
-    
-    # Shutdown cleanup
-    if voice_task:
-        logger.info("Cancelling Voice Input Task...")
-        voice_task.cancel()
-        try:
-            await voice_task
-        except asyncio.CancelledError:
-            pass
 
     logger.info("Shutting down EchoBot...")
 
@@ -421,136 +391,19 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# --- Plugin Notification Handler ---
-async def handle_plugin_notification(text: str):
-    """Handle notifications from plugins (e.g., reminders)."""
-    logger.info(f"PLUGIN NOTIFICATION: {text}")
-
-    # Broadcast to frontend
-    payload = {
-        "type": "notification",
-        "text": text,
-        "level": "info"
-    }
-    await manager.broadcast(json.dumps(payload))
-
-    # Speak if TTS is available
-    if tts_engine and tts_engine.is_available:
-        try:
-            # Announce it
-            await manager.broadcast(json.dumps({"status": "speaking"}))
-            audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, text)
-            if audio_bytes:
-                audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-                await manager.broadcast(json.dumps({
-                    "type": "audio",
-                    "text": text,
-                    "audio": audio_b64
-                }))
-            await manager.broadcast(json.dumps({"status": "idle"}))
-        except Exception as e:
-            logger.error(f"TTS Error in notification: {e}")
-
-# --- Voice Loop Integration ---
-async def run_voice_loop():
-    global voice_engine
-    if not voice_engine:
-        return
-    logger.info("Voice Input Loop Started")
-    try:
-        while True:
-            try:
-                # wait_for_wake_word blocks, run in thread
-                detected = await asyncio.to_thread(voice_engine.wait_for_wake_word)
-                if detected:
-                     # listen blocks, run in thread
-                     text = await asyncio.to_thread(voice_engine.listen)
-                     if text:
-                         # process_user_request is async, run directly
-                         await process_user_request(text)
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                logger.error(f"Error in voice loop: {e}")
-                # Non-blocking sleep
-                await asyncio.sleep(1)
-    except asyncio.CancelledError:
-        logger.info("Voice Input Loop Cancelled")
-
-# --- Core Processing Logic ---
-async def process_user_request(user_text: str, websocket: WebSocket = None):
-    logger.info(f"=== PROCESSING REQUEST: {user_text} ===")
-    
-    # 1. Prepare Context (RAG)
-    memory_context = ""
-    if llm_service.memory_service:
-        try:
-             relevant_memories = await asyncio.to_thread(llm_service.memory_service.query, user_text)
-             if relevant_memories:
-                 memory_context = f"\n\nRelevant Past Memories:\n{relevant_memories}"
-        except Exception as e:
-            logger.error(f"Memory Retrieval Error: {e}")
-
-    # 2. Construct Messages
-    # Note: LLMService is now using new SDK but get_response signature handles formatting
-    messages = [
-        {"role": "system", "content": f"You are EchoBot, a helpful and witty AI assistant.{memory_context}"},
-        {"role": "user", "content": user_text}
-    ]
-    
-    tools = plugin_manager.get_tool_definitions() if plugin_manager else None
-    
-    response_message = await asyncio.to_thread(llm_service.get_response, messages, tools=tools)
-    
-    if isinstance(response_message, str):
-        payload_str = json.dumps({"type": "error", "text": response_message})
-        if websocket:
-            await manager.send_to(websocket, payload_str)
-        else:
-            await manager.broadcast(payload_str)
-        return
-
-    response_text = getattr(response_message, 'content', "")
-
-    # Proceed with text response
-
-
-    if not response_text:
-        response_text = "I'm sorry, I couldn't generate a response."
-
-    # Memory
-    if llm_service.memory_service:
-        try:
-            full_exchange = f"User: {user_text}\nAssistant: {response_text}"
-            llm_service.memory_service.add(full_exchange)
-        except Exception:
-            pass
-    
-    # Response
-    audio_b64 = None
-    if tts_engine and tts_engine.is_available:
-        try:
-             await manager.broadcast(json.dumps({"status": "speaking"}))
-             audio_bytes = await asyncio.to_thread(tts_engine.generate_audio_bytes, response_text)
-             if audio_bytes:
-                 audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-        except Exception:
-             pass
-
-    payload = {
-            "type": "audio",
-            "text": response_text,
-            "audio": audio_b64
-    }
-    payload_str = json.dumps(payload)
-    if websocket:
-        await manager.send_to(websocket, payload_str)
-    else:
-        await manager.broadcast(payload_str)
-        
-    if not audio_b64:
-        await manager.broadcast(json.dumps({"status": "idle"}))
-
+# NOTE (WS5/F8, F11): handle_plugin_notification, run_voice_loop, and
+# process_user_request were removed here. All three were proven fully
+# unreachable in the deployed web server -- process_user_request/run_voice_loop
+# via the voice.enabled config gate (always False; no key exists in
+# config/settings.yaml and nothing overrides it in render.yaml/.env.example),
+# and handle_plugin_notification via an independent chain (nothing in this
+# repository ever calls add_reminder/dispatches an intent to any plugin, so
+# ReminderPlugin's scheduler callback -- the only thing that ever invoked
+# handle_plugin_notification -- can never fire). See
+# EchoBot_Phase6_Workstream5_Plan_2026-08-30.md for the full reachability
+# proof. PluginManager/ReminderPlugin/the scheduler themselves are untouched --
+# they remain live, independently-tested, reusable infrastructure that is
+# simply not wired to any dispatcher today.
 
 # --- Routes ---
 @app.get("/{full_path:path}")
