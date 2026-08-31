@@ -48,6 +48,27 @@ def _record_llm_attempt(success: bool) -> None:
     global _llm_last_attempt
     _llm_last_attempt = (time.monotonic(), success)
 
+
+def _categorize_llm_error(exc: Exception) -> str:
+    """Categorize an LLM call failure into one of a small, fixed set of safe
+    codes for the client (F4). Mirrors the substring checks the frontend
+    (useChat.ts) used to run against the raw exception text -- that check now
+    happens here, server-side, against the real exception, and only the
+    resulting code (never str(exc)) is ever sent to the client. The full
+    exception is still logged server-side by the caller, unchanged.
+
+    Must stay limited to exactly these four codes: "rate_limit", "safety",
+    "no_api_key", "generic" -- the frontend's ERROR_CODE_MESSAGES lookup in
+    useChat.ts is keyed to exactly this set."""
+    msg = str(exc).lower()
+    if "429" in msg or "rate" in msg or "quota" in msg:
+        return "rate_limit"
+    if "safety" in msg or "block" in msg:
+        return "safety"
+    if "api key" in msg or "not configured" in msg:
+        return "no_api_key"
+    return "generic"
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager for startup/shutdown."""
@@ -205,7 +226,11 @@ async def gemini_chat(chat_request: ChatRequest, request: Request, _token=Depend
         except Exception as e:
             _record_llm_attempt(False)
             logger.error(f"Gemini Streaming Error: {e}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            # F4: never send str(e) (or any other raw exception detail) to the
+            # client -- only one of the four fixed, safe categories from
+            # _categorize_llm_error. The real exception stays server-side,
+            # in the logger.error call above.
+            yield f"data: {json.dumps({'error': _categorize_llm_error(e)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

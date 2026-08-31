@@ -7,6 +7,17 @@ import { logger } from '../utils/logger';
 const { ERRORS } = CHAT_MESSAGES;
 const { ERROR_DISPLAY_DURATION } = UI_CONFIG;
 
+// F4: the backend now sends one of exactly these four safe category codes
+// (never raw exception text) in the streamed error event -- see
+// _categorize_llm_error in web/backend/app.py. Matched by exact equality,
+// not substring parsing, so an unrecognized code always falls back to
+// ERRORS.GENERIC rather than accidentally matching something unintended.
+const ERROR_CODE_MESSAGES: Record<string, string> = {
+    rate_limit: ERRORS.RATE_LIMIT,
+    safety: ERRORS.SAFETY,
+    no_api_key: ERRORS.NO_API_KEY,
+};
+
 interface UseChatOptions {
     messages: Message[];
     addMessage: (message: Omit<Message, 'id' | 'timestamp'>) => string;
@@ -98,14 +109,7 @@ export function useChat({
                 updateOrbState(OrbState.ERROR);
                 playSound('ERROR');
 
-                const msg = (error.message || '').toLowerCase();
-                const errorMessage = msg.includes('429') || msg.includes('rate') || msg.includes('quota')
-                    ? ERRORS.RATE_LIMIT
-                    : msg.includes('safety') || msg.includes('block')
-                        ? ERRORS.SAFETY
-                        : msg.includes('api key') || msg.includes('not configured')
-                            ? ERRORS.NO_API_KEY
-                            : ERRORS.GENERIC;
+                const errorMessage = ERROR_CODE_MESSAGES[error.message] ?? ERRORS.GENERIC;
 
                 updateMessage(botMsgId, { text: errorMessage });
 
