@@ -69,6 +69,57 @@ def _categorize_llm_error(exc: Exception) -> str:
         return "no_api_key"
     return "generic"
 
+
+def build_system_instruction(client_instruction: str):
+    """Compose the Gemini system instruction from the server-level preamble
+    (SERVER_SYSTEM_PREAMBLE -- an operator-controlled env var reserved for
+    genuine safety/compliance constraints, never exposed to the client) and
+    the user's client-supplied System Prompt, as two DISTINCT parts rather
+    than one concatenated string.
+
+    Previously this was `f"{server_preamble}\n{client_inst}".strip()` -- a
+    single opaque string with the server preamble unconditionally glued onto
+    the front of whatever the user's Settings System Prompt currently said.
+    That made the user's prompt inseparable from the server text and put a
+    persona-bearing preamble (if one is configured) in the leading position
+    of one undifferentiated blob -- see
+    EchoBot_SystemPrompt_Preamble_Investigation_2026-08-31.md for the full
+    investigation and reproduction.
+
+    The installed google-genai SDK (2.20.0) accepts `system_instruction` as
+    `list[str | Part | ...]` (confirmed via
+    `GenerateContentConfig.model_fields["system_instruction"]`), and its
+    request-building transformer (`google.genai._transformers.t_content`)
+    turns a list of plain strings into a single Content with one Part per
+    list entry -- confirmed by calling it directly and inspecting the
+    resulting Content.model_dump(): each string becomes its own {"text": ...}
+    Part in the actual Gemini API request body, never merged into one
+    string. Returning that list here (instead of one f-string) is what lets
+    gemini_chat and gemini_chat_simple send the server preamble and the
+    client's System Prompt as two separate, distinguishable parts.
+
+    This does not change what SERVER_SYSTEM_PREAMBLE can enforce -- it is
+    still always included when set, and its value is still never sent to the
+    client. It also cannot decide *whose instruction wins* if the two
+    genuinely conflict in content -- that depends on what
+    SERVER_SYSTEM_PREAMBLE is actually configured to contain in the deployed
+    environment (a value this code has no visibility into and must not
+    guess at) and on Gemini's own handling of the resulting parts, not on
+    how this function represents them. What this fixes is structural: the
+    user's System Prompt is no longer silently absorbed into one string
+    dominated by whatever precedes it -- it is always present as its own
+    distinct, freshly-computed part on every request.
+
+    Returns None if both pieces are empty (matching the previous
+    `if final_inst else None` behavior), otherwise a list of the non-empty
+    pieces in order [server_preamble, client_instruction].
+    """
+    server_preamble = os.environ.get("SERVER_SYSTEM_PREAMBLE", "").strip()
+    client_inst = (client_instruction or "")[:4000].strip()
+    parts = [p for p in (server_preamble, client_inst) if p]
+    return parts or None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan context manager for startup/shutdown."""
@@ -193,10 +244,8 @@ async def gemini_chat(chat_request: ChatRequest, request: Request, _token=Depend
 
     model = get_validated_model(chat_request.modelName)
     contents = build_gemini_contents(chat_request)
-    server_preamble = os.environ.get("SERVER_SYSTEM_PREAMBLE", "")
-    client_inst = (chat_request.systemInstruction or "")[:4000]
-    final_inst = f"{server_preamble}\n{client_inst}".strip()
-    config_dict = {"system_instruction": final_inst} if final_inst else None
+    instruction_parts = build_system_instruction(chat_request.systemInstruction)
+    config_dict = {"system_instruction": instruction_parts} if instruction_parts else None
 
     async def event_generator():
         try:
@@ -243,10 +292,8 @@ async def gemini_chat_simple(chat_request: ChatRequest, request: Request, _token
 
     model = get_validated_model(chat_request.modelName)
     contents = build_gemini_contents(chat_request)  # Now respects history + images
-    server_preamble = os.environ.get("SERVER_SYSTEM_PREAMBLE", "")
-    client_inst = (chat_request.systemInstruction or "")[:4000]
-    final_inst = f"{server_preamble}\n{client_inst}".strip()
-    config_dict = {"system_instruction": final_inst} if final_inst else None
+    instruction_parts = build_system_instruction(chat_request.systemInstruction)
+    config_dict = {"system_instruction": instruction_parts} if instruction_parts else None
 
     try:
         if hasattr(gemini_client, 'aio'):
