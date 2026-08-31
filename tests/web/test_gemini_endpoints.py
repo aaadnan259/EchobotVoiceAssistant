@@ -90,12 +90,16 @@ def test_chat_simple_records_success_for_health_signal():
 
 
 def test_chat_simple_error_response_unchanged_and_records_failure():
-    """F4 (chat-error-handling inconsistency) is explicitly out of scope for
-    Workstream 4: gemini_chat_simple's exception must still propagate completely
-    unchanged -- same type, same message -- proving the F6 instrumentation is a
-    bare record-then-raise and did not wrap, swallow, or alter it. TestClient's
-    default raise_server_exceptions=True surfaces the original exception directly
-    here, which is the strongest possible proof it wasn't touched."""
+    """F4 is fixed for the streaming endpoint (see
+    test_chat_streaming_sanitizes_error_and_maps_to_safe_category below); this
+    non-streaming endpoint's behavior was already correct and is the reference
+    that fix was designed to match. Its exception must still propagate
+    completely unchanged -- same type, same message -- proving the F6
+    instrumentation is a bare record-then-raise and did not wrap, swallow, or
+    alter it, and that F4's streaming-only fix did not touch this endpoint.
+    TestClient's default raise_server_exceptions=True surfaces the original
+    exception directly here, which is the strongest possible proof it wasn't
+    touched."""
     from web.backend.app import require_valid_token
     import web.backend.app as app_module
     from unittest.mock import AsyncMock
@@ -154,10 +158,23 @@ def test_chat_streaming_records_success():
     app_module._llm_last_attempt = None
 
 
-def test_chat_streaming_records_failure_and_error_event_unchanged():
-    """F4 is out of scope here too: the streamed error event's content (still
-    str(e) verbatim in an 'error' SSE event) must be byte-for-byte unchanged;
-    only the cached health signal is new."""
+@pytest.mark.parametrize(
+    "raw_exception_message,expected_category",
+    [
+        ("429 Too Many Requests: quota exceeded", "rate_limit"),
+        ("Content blocked by safety filters", "safety"),
+        ("Invalid API key: not configured", "no_api_key"),
+        ("boom: simulated stream failure", "generic"),
+    ],
+)
+def test_chat_streaming_sanitizes_error_and_maps_to_safe_category(raw_exception_message, expected_category):
+    """F4: the streamed error event must never contain the raw exception text
+    (or any other internal detail) -- only one of the four fixed, safe
+    categories produced by _categorize_llm_error. The real exception must
+    still be recorded via _record_llm_attempt(False) exactly as before --
+    server-side observability (this signal, and logger.error, which is
+    covered by the live-server reproduction rather than a unit test) is
+    unchanged; only what reaches the client is sanitized."""
     from web.backend.app import require_valid_token
     import web.backend.app as app_module
     from unittest.mock import AsyncMock
@@ -166,7 +183,7 @@ def test_chat_streaming_records_failure_and_error_event_unchanged():
     app.dependency_overrides[require_valid_token] = lambda: {"sid": "test"}
     with patch("web.backend.app.gemini_client") as mock_client:
         mock_client.aio.models.generate_content_stream = AsyncMock(
-            side_effect=RuntimeError("boom: simulated stream failure")
+            side_effect=RuntimeError(raw_exception_message)
         )
 
         response = client.post("/api/gemini/chat", json={
@@ -176,8 +193,8 @@ def test_chat_streaming_records_failure_and_error_event_unchanged():
             "newMessage": "Hello"
         })
         assert response.status_code == 200  # StreamingResponse already started
-        assert "boom: simulated stream failure" in response.text
-        assert '"error"' in response.text
+        assert f'"error": "{expected_category}"' in response.text
+        assert raw_exception_message not in response.text
 
     assert app_module._llm_last_attempt is not None
     _, ok = app_module._llm_last_attempt
