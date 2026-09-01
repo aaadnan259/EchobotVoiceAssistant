@@ -2,7 +2,7 @@
 
 ## D5: Frontend Architecture
 - The legacy vanilla frontend (`static`/`templates`) has been deleted.
-- The root route now acts as a SPA catch-all, serving `index.html` from the React `dist/` directory, or returning a JSON 500 error if the frontend hasn't been built.
+- The root route now acts as a SPA catch-all, serving `index.html` from the React `build/` directory, or returning a JSON 500 error if the frontend hasn't been built.
 - Static assets and the PWA Service Worker (`sw.js`) are served directly. Assets are cached immutably, while `index.html` and `sw.js` are served with `Cache-Control: no-cache` to ensure updates.
 
 ## D6: Settings API Deletion
