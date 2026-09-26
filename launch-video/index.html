@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>EchoBot Launch</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Inter"; font-weight: 400; src: url("assets/fonts/inter-latin-400-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Inter"; font-weight: 500; src: url("assets/fonts/inter-latin-500-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Inter"; font-weight: 600; src: url("assets/fonts/inter-latin-600-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Inter"; font-weight: 700; src: url("assets/fonts/inter-latin-700-normal.woff2") format("woff2"); }
+      @font-face { font-family: "Inter"; font-weight: 800; src: url("assets/fonts/inter-latin-800-normal.woff2") format("woff2"); }
+
+      /* Tokens lifted from the app: MainLayout, Orb, MessageBubble, InputBar, themes.ts */
+      :root {
+        --bg: #0b0d18;
+        --bg-glow: #1e1b4b;
+        --surface: #1e2335;
+        --violet-600: #7c3aed;
+        --violet-500: #8b5cf6;
+        --purple-500: #a855f7;
+        --lavender: #d8b4fe;
+        --indigo-600: #4f46e5;
+        --ink: #f9fafb;
+        --muted: #9ca3af;
+        --line: rgba(255, 255, 255, 0.1);
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Inter", sans-serif;
+      }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+      .clip { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .wrap { position: absolute; inset: 0; width: 100%; height: 100%; }
+      .center { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      svg.ico { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+      /* ---------- persistent background ---------- */
+      #bg-layer {
+        background: radial-gradient(ellipse 90% 70% at 50% 0%, var(--bg-glow) 0%, var(--bg) 55%, #000 100%);
+      }
+      #bg-bloom {
+        position: absolute; left: 50%; top: 50%; width: 1400px; height: 1400px;
+        margin: -700px 0 0 -700px; border-radius: 50%;
+        background: radial-gradient(circle, rgba(124, 58, 237, 0.28) 0%, rgba(124, 58, 237, 0) 60%);
+      }
+      #bg-grid {
+        position: absolute; inset: 0;
+        background-image:
+          linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+        background-size: 80px 80px;
+        -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 20%, transparent 75%);
+        mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 20%, transparent 75%);
+      }
+
+      /* ---------- orb (mirrors src/components/Orb.tsx) ---------- */
+      .orb { display: block; overflow: visible; }
+
+      /* ---------- scene 1: hook ---------- */
+      #s1-orb-box { width: 360px; height: 360px; margin-bottom: 36px; }
+      #s1-orb { width: 360px; height: 360px; filter: drop-shadow(0 0 60px rgba(124, 58, 237, 0.85)); }
+      #s1-title { font-size: 132px; font-weight: 800; letter-spacing: -0.045em; line-height: 1; display: flex; gap: 32px; }
+      #s1-title span { display: inline-block; }
+      #s1-title .grad {
+        background: linear-gradient(135deg, #e9d5ff 0%, var(--purple-500) 55%, var(--violet-600) 100%);
+        -webkit-background-clip: text; background-clip: text; color: transparent;
+      }
+      #s1-sub { margin-top: 28px; font-size: 38px; font-weight: 500; color: var(--muted); letter-spacing: -0.01em; }
+
+      /* ---------- scene 2: voice ---------- */
+      #s2-inner { display: flex; align-items: center; justify-content: center; gap: 150px; height: 100%; padding-bottom: 60px; }
+      #s2-left { position: relative; width: 520px; height: 620px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      #s2-orb-box { position: relative; width: 340px; height: 340px; }
+      #s2-orb { position: absolute; inset: 0; width: 340px; height: 340px; filter: drop-shadow(0 0 70px #c084fc); }
+      .s2-ring {
+        position: absolute; left: 50%; top: 50%; width: 340px; height: 340px; margin: -170px 0 0 -170px;
+        border-radius: 50%; border: 3px solid rgba(233, 213, 255, 0.7);
+      }
+      #s2-wave { display: flex; align-items: center; gap: 10px; height: 110px; margin-top: 56px; }
+      .s2-bar { display: block; width: 12px; height: 110px; border-radius: 6px; background: linear-gradient(180deg, var(--lavender), var(--violet-600)); transform: scaleY(0.12); }
+      #s2-right { display: flex; flex-direction: column; gap: 26px; }
+      .s2-row { display: flex; align-items: center; gap: 36px; }
+      .s2-icon {
+        width: 112px; height: 112px; border-radius: 28px; padding: 28px;
+        background: rgba(139, 92, 246, 0.14); border: 1px solid rgba(139, 92, 246, 0.35); color: var(--lavender);
+      }
+      .s2-word { font-size: 124px; font-weight: 800; letter-spacing: -0.045em; line-height: 1.05; }
+      .s2-word.dim { color: #61667e; }
+
+      /* ---------- scene 3: chat demo ---------- */
+      #s3-window {
+        position: absolute; left: 50%; top: 88px; width: 1280px; height: 800px; margin-left: -640px;
+        border-radius: 32px; background: #0f1222; border: 1px solid var(--line);
+        box-shadow: 0 60px 140px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(139, 92, 246, 0.12), 0 0 120px rgba(124, 58, 237, 0.18);
+        overflow: hidden;
+      }
+      #s3-top { height: 88px; display: flex; align-items: center; justify-content: space-between; padding: 0 36px; border-bottom: 1px solid var(--line); background: rgba(11, 13, 24, 0.8); }
+      #s3-brand { display: flex; align-items: center; gap: 16px; font-size: 26px; font-weight: 500; letter-spacing: 0.02em; }
+      #s3-brand .orb { width: 48px; height: 48px; filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.6)); }
+      #s3-status { display: flex; align-items: center; gap: 10px; font-size: 18px; color: var(--muted); }
+      #s3-status i { display: block; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+      #s3-msgs { position: absolute; left: 0; right: 0; top: 88px; bottom: 132px; padding: 44px 64px; display: flex; flex-direction: column; gap: 28px; }
+      .s3-user {
+        align-self: flex-end; max-width: 70%; padding: 22px 28px; border-radius: 26px 26px 6px 26px;
+        background: linear-gradient(135deg, var(--indigo-600), #7e22ce); font-size: 28px; line-height: 1.4;
+        box-shadow: 0 12px 30px rgba(79, 70, 229, 0.35);
+      }
+      .s3-botrow { display: flex; gap: 18px; align-items: flex-start; }
+      .s3-avatar {
+        flex: none; width: 52px; height: 52px; border-radius: 50%; margin-top: 4px;
+        background: linear-gradient(135deg, var(--purple-500), #7e22ce); box-shadow: 0 8px 20px rgba(168, 85, 247, 0.35);
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+      }
+      .s3-avatar b { display: block; width: 10px; height: 10px; border-radius: 50%; background: #fff; }
+      .s3-bot {
+        position: relative; max-width: 860px; padding: 24px 30px; border-radius: 26px 26px 26px 6px;
+        background: var(--surface); border: 1px solid rgba(255, 255, 255, 0.06); font-size: 30px; line-height: 1.5; color: #f3f4f6;
+        min-height: 94px;
+      }
+      #s3-dots { position: absolute; left: 30px; top: 38px; display: flex; gap: 10px; }
+      #s3-dots b { display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--lavender); }
+      #s3-reply span { display: inline-block; white-space: pre; }
+      #s3-input-wrap { position: absolute; left: 48px; right: 48px; bottom: 32px; }
+      #s3-input {
+        height: 84px; border-radius: 42px; background: var(--surface); border: 1px solid rgba(139, 92, 246, 0.5);
+        box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.12); display: flex; align-items: center; padding: 0 14px 0 26px; gap: 18px;
+      }
+      #s3-input .clipico { width: 30px; height: 30px; color: var(--muted); flex: none; }
+      #s3-field { position: relative; flex: 1; height: 40px; font-size: 26px; line-height: 40px; }
+      #s3-placeholder { position: absolute; left: 0; top: 0; color: #6b7280; }
+      #s3-typed { position: absolute; left: 0; top: 0; white-space: pre; }
+      #s3-typed span { display: inline-block; white-space: pre; }
+      #s3-mic { width: 58px; height: 58px; padding: 15px; color: var(--muted); flex: none; }
+      #s3-send { width: 58px; height: 58px; border-radius: 50%; padding: 15px; background: var(--violet-600); color: #fff; flex: none; }
+      #s3-chip {
+        position: absolute; right: 150px; top: 58px; padding: 16px 26px; border-radius: 999px;
+        background: rgba(34, 211, 238, 0.12); border: 1px solid rgba(34, 211, 238, 0.45); color: #a5f3fc;
+        font-size: 24px; font-weight: 600; letter-spacing: 0.01em; display: flex; align-items: center; gap: 12px;
+      }
+      #s3-chip i { display: block; width: 12px; height: 12px; border-radius: 50%; background: #22d3ee; box-shadow: 0 0 12px #22d3ee; }
+
+      /* ---------- scene 4: features ---------- */
+      #s4-inner { display: flex; flex-direction: column; align-items: center; padding-top: 130px; }
+      #s4-title { font-size: 92px; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 70px; }
+      #s4-grid { display: grid; grid-template-columns: repeat(2, 640px); gap: 36px; }
+      .s4-card {
+        height: 220px; border-radius: 32px; padding: 40px 44px; display: flex; align-items: center; gap: 36px;
+        background: linear-gradient(160deg, rgba(30, 35, 53, 0.95), rgba(19, 22, 38, 0.95));
+        border: 1px solid rgba(139, 92, 246, 0.25); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+      }
+      .s4-icon {
+        flex: none; width: 116px; height: 116px; border-radius: 30px; padding: 30px; color: #fff;
+        background: linear-gradient(135deg, var(--purple-500), var(--violet-600)); box-shadow: 0 12px 30px rgba(124, 58, 237, 0.45);
+      }
+      .s4-name { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+      .s4-desc { margin-top: 10px; font-size: 26px; color: var(--muted); font-weight: 500; }
+
+      /* ---------- scene 5: themes ---------- */
+      .s5-bg { position: absolute; inset: 0; }
+      #s5-inner { display: flex; flex-direction: column; align-items: center; padding-top: 150px; }
+      #s5-title { font-size: 104px; font-weight: 800; letter-spacing: -0.045em; margin-bottom: 90px; }
+      #s5-row { display: flex; gap: 40px; }
+      .s5-card { position: relative; width: 300px; border-radius: 26px; overflow: hidden; box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45); border: 2px solid rgba(255, 255, 255, 0.12); }
+      .s5-head { height: 70px; display: flex; align-items: center; gap: 12px; padding: 0 22px; }
+      .s5-head b { display: block; width: 14px; height: 14px; border-radius: 50%; }
+      .s5-body { height: 170px; padding: 26px 22px; display: flex; flex-direction: column; gap: 16px; }
+      .s5-line { display: block; height: 14px; border-radius: 7px; }
+      .s5-bubble { align-self: flex-end; width: 55%; height: 40px; border-radius: 16px 16px 4px 16px; }
+      .s5-name { padding: 18px 22px; font-size: 26px; font-weight: 600; background: rgba(0, 0, 0, 0.35); color: #fff; }
+      #s5-ring {
+        position: absolute; left: 0; top: 0; width: 316px; height: 332px; margin: -8px 0 0 -8px; border-radius: 32px;
+        border: 5px solid #fff; box-shadow: 0 0 40px rgba(255, 255, 255, 0.35);
+      }
+      #s5-row-wrap { position: relative; }
+
+      /* ---------- scene 6: architecture ---------- */
+      #s6-inner { display: flex; flex-direction: column; align-items: center; padding-top: 190px; }
+      #s6-flow { position: relative; display: flex; align-items: center; gap: 0; }
+      .s6-node {
+        position: relative; z-index: 2; width: 380px; height: 250px; border-radius: 32px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 18px; background: var(--surface); border: 1px solid rgba(139, 92, 246, 0.35);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      }
+      .s6-node .lbl { font-size: 44px; font-weight: 700; letter-spacing: -0.02em; }
+      .s6-node .sub { font-size: 24px; color: var(--muted); font-weight: 500; }
+      .s6-node.key { border-color: rgba(34, 211, 238, 0.55); box-shadow: 0 0 60px rgba(34, 211, 238, 0.18), 0 24px 60px rgba(0, 0, 0, 0.45); }
+      .s6-link { position: relative; width: 170px; height: 6px; }
+      .s6-link b { display: block; width: 100%; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--purple-500), #22d3ee); transform-origin: left center; }
+      .s6-pulse { position: absolute; top: -7px; left: 0; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 0 20px #22d3ee; }
+      #s6-lock {
+        margin-top: 80px; display: flex; align-items: center; gap: 22px; padding: 22px 38px; border-radius: 999px;
+        background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34, 211, 238, 0.45); color: #cffafe; font-size: 34px; font-weight: 600;
+      }
+      #s6-lock .ico-box { width: 38px; height: 38px; color: #22d3ee; }
+
+      /* ---------- scene 7: end card ---------- */
+      #s7-orb-box { width: 260px; height: 260px; margin-bottom: 40px; }
+      #s7-orb { width: 260px; height: 260px; filter: drop-shadow(0 0 60px rgba(124, 58, 237, 0.9)); }
+      #s7-name { font-size: 150px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; }
+      #s7-tag { margin-top: 26px; font-size: 40px; font-weight: 500; color: #d1d5db; letter-spacing: -0.01em; }
+      #s7-tag em { font-style: normal; color: var(--lavender); }
+      #s7-url {
+        margin-top: 56px; padding: 18px 34px; border-radius: 999px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04);
+        font-size: 28px; font-weight: 500; color: #e5e7eb; display: flex; align-items: center; gap: 16px;
+      }
+      #s7-url .ico-box { width: 32px; height: 32px; color: var(--lavender); }
+      #s7-stack { margin-top: 30px; font-size: 22px; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: #8a90a0; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="27" data-width="1920" data-height="1080">
+      <!-- Orb gradient shared by every orb instance -->
+      <svg width="0" height="0" style="position: absolute">
+        <defs>
+          <radialGradient id="orbGradient" cx="30%" cy="30%" r="70%">
+            <stop offset="0%" stop-color="#d8b4fe" />
+            <stop offset="50%" stop-color="#7c3aed" />
+            <stop offset="100%" stop-color="#4c1d95" />
+          </radialGradient>
+        </defs>
+      </svg>
+
+      <!-- Background (whole video) -->
+      <div id="bg-layer" class="clip" data-start="0" data-duration="27" data-track-index="0">
+        <div id="bg-bloom"></div>
+        <div id="bg-grid"></div>
+      </div>
+
+      <!-- Scene 1 — Hook: meet EchoBot -->
+      <section id="s1" data-layout-allow-overlap data-layout-allow-occlusion class="clip" data-start="0" data-duration="4.4" data-track-index="1">
+        <div id="s1-wrap" class="wrap center">
+          <div id="s1-orb-box">
+            <svg id="s1-orb" class="orb" viewBox="-80 -80 160 160">
+              <circle cx="0" cy="0" r="60" fill="url(#orbGradient)" />
+              <g id="s1-eyes">
+                <ellipse cx="-15" cy="0" rx="8" ry="12" fill="white" />
+                <ellipse cx="15" cy="0" rx="8" ry="12" fill="white" />
+              </g>
+            </svg>
+          </div>
+          <h1 id="s1-title"><span id="s1-w1">Meet</span><span id="s1-w2" class="grad">EchoBot.</span></h1>
+          <p id="s1-sub">An AI assistant you can talk to.</p>
+        </div>
+      </section>
+
+      <!-- Scene 2 — Voice: talk / type / listen -->
+      <section id="s2" data-layout-allow-overlap data-layout-allow-occlusion class="clip" data-start="4" data-duration="4.9" data-track-index="2">
+        <div id="s2-wrap" class="wrap">
+          <div id="s2-inner">
+            <div id="s2-left">
+              <div id="s2-orb-box">
+                <div class="s2-ring" id="s2-ring1"></div>
+                <div class="s2-ring" id="s2-ring2"></div>
+                <div class="s2-ring" id="s2-ring3"></div>
+                <svg id="s2-orb" class="orb" viewBox="-80 -80 160 160">
+                  <circle cx="0" cy="0" r="60" fill="url(#orbGradient)" />
+                  <g id="s2-eyes">
+                    <ellipse cx="-15" cy="0" rx="8" ry="15" fill="white" />
+                    <ellipse cx="15" cy="0" rx="8" ry="15" fill="white" />
+                  </g>
+                </svg>
+              </div>
+              <div id="s2-wave"></div>
+            </div>
+            <div id="s2-right">
+              <div class="s2-row" id="s2-r1">
+                <div class="s2-icon"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div>
+                <div class="s2-word">Talk.</div>
+              </div>
+              <div class="s2-row" id="s2-r2">
+                <div class="s2-icon"><svg class="ico" viewBox="0 0 24 24"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg></div>
+                <div class="s2-word">Type.</div>
+              </div>
+              <div class="s2-row" id="s2-r3">
+                <div class="s2-icon"><svg class="ico" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></div>
+                <div class="s2-word">Listen.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 3 — Streaming chat demo -->
+      <section id="s3" data-layout-allow-overlap data-layout-allow-occlusion class="clip" data-start="8.5" data-duration="6" data-track-index="3">
+        <div id="s3-wrap" class="wrap">
+          <div id="s3-window">
+            <div id="s3-top">
+              <div id="s3-brand">
+                <svg class="orb" viewBox="-80 -80 160 160"><circle cx="0" cy="0" r="60" fill="url(#orbGradient)" /><ellipse cx="-15" cy="0" rx="8" ry="12" fill="white" /><ellipse cx="15" cy="0" rx="8" ry="12" fill="white" /></svg>
+                EchoBot
+              </div>
+              <div id="s3-status"><i></i>Gemini 2.5 Flash</div>
+            </div>
+            <div id="s3-msgs">
+              <div class="s3-user" id="s3-user">Explain a black hole in one sentence.</div>
+              <div class="s3-botrow" id="s3-botrow">
+                <div class="s3-avatar"><b></b><b></b></div>
+                <div class="s3-bot">
+                  <div id="s3-dots"><b></b><b></b><b></b></div>
+                  <p id="s3-reply"></p>
+                </div>
+              </div>
+            </div>
+            <div id="s3-input-wrap">
+              <div id="s3-input">
+                <div class="clipico"><svg class="ico" viewBox="0 0 24 24"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></div>
+                <div id="s3-field">
+                  <span id="s3-placeholder">Message EchoBot...</span>
+                  <span id="s3-typed"></span>
+                </div>
+                <div id="s3-mic"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></div>
+                <div id="s3-send"><svg class="ico" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></div>
+              </div>
+            </div>
+          </div>
+          <div id="s3-chip"><i></i>Streams in real time</div>
+        </div>
+      </section>
+
+      <!-- Scene 4 — Feature grid -->
+      <section id="s4" data-layout-allow-overlap data-layout-allow-occlusion class="clip" data-start="14.1" data-duration="4.3" data-track-index="4">
+        <div id="s4-wrap" class="wrap">
+          <div id="s4-inner">
+            <h2 id="s4-title">Built for the way you talk.</h2>
+            <div id="s4-grid">
+              <div class="s4-card" id="s4-c1">
+                <div class="s4-icon"><svg class="ico" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></div>
+                <div><div class="s4-name">Voice in &amp; out</div><div class="s4-desc">Dictate, then hear replies</div></div>
+              </div>
+              <div class="s4-card" id="s4-c2">
+                <div class="s4-icon"><svg class="ico" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>
+                <div><div class="s4-name">Image input</div><div class="s4-desc">Drop a picture into the chat</div></div>
+              </div>
+              <div class="s4-card" id="s4-c3">
+                <div class="s4-icon"><svg class="ico" viewBox="0 0 24 24"><line x1="6" x2="6" y1="3" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>
+                <div><div class="s4-name">Branch &amp; export</div><div class="s4-desc">Fork and save conversations</div></div>
+              </div>
+              <div class="s4-card" id="s4-c4">
+                <div class="s4-icon"><svg class="ico" viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg></div>
+                <div><div class="s4-name">Installable app</div><div class="s4-desc">PWA that works offline</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 5 — Themes -->
+      <section id="s5" data-layout-allow-overlap data-layout-allow-occlusion class="clip" data-start="18" data-duration="3.6" data-track-index="5">
+        <div id="s5-wrap" class="wrap">
+          <div class="s5-bg" id="s5-bg0" style="background: #0b0d18"></div>
+          <div class="s5-bg" id="s5-bg1" style="background: radial-gradient(ellipse at 50% 20%, #064e3b, #022c22 60%)"></div>
+          <div class="s5-bg" id="s5-bg2" style="background: radial-gradient(ellipse at 50% 20%, #7c2d12, #431407 60%)"></div>
+          <div class="s5-bg" id="s5-bg3" style="background: radial-gradient(ellipse at 50% 20%, #0c4a6e, #082f49 60%)"></div>
+          <div id="s5-inner">
+            <h2 id="s5-title">Make it yours.</h2>
+            <div id="s5-row-wrap">
+              <div id="s5-row">
+                <div class="s5-card" id="s5-t0">
+                  <div class="s5-head" style="background: #f9fafb"><b style="background: #ef4444"></b><b style="background: #7c3aed"></b><b style="background: #10b981"></b></div>
+                  <div class="s5-body" style="background: #ffffff"><span class="s5-line" style="width: 75%; background: #111827; opacity: 0.5"></span><span class="s5-line" style="width: 50%; background: #111827; opacity: 0.3"></span><span class="s5-bubble" style="background: #7c3aed"></span></div>
+                  <div class="s5-name">Daylight</div>
+                </div>
+                <div class="s5-card" id="s5-t1">
+                  <div class="s5-head" style="background: #0b0d18"><b style="background: #ef4444"></b><b style="background: #8b5cf6"></b><b style="background: #10b981"></b></div>
+                  <div class="s5-body" style="background: #1f2937"><span class="s5-line" style="width: 75%; background: #f9fafb; opacity: 0.5"></span><span class="s5-line" style="width: 50%; background: #f9fafb; opacity: 0.3"></span><span class="s5-bubble" style="background: #8b5cf6"></span></div>
+                  <div class="s5-name">Midnight</div>
+                </div>
+                <div class="s5-card" id="s5-t2">
+                  <div class="s5-head" style="background: #022c22"><b style="background: #ef4444"></b><b style="background: #10b981"></b><b style="background: #34d399"></b></div>
+                  <div class="s5-body" style="background: #064e3b"><span class="s5-line" style="width: 75%; background: #ecfdf5; opacity: 0.5"></span><span class="s5-line" style="width: 50%; background: #ecfdf5; opacity: 0.3"></span><span class="s5-bubble" style="background: #10b981"></span></div>
+                  <div class="s5-name">Forest</div>
+                </div>
+                <div class="s5-card" id="s5-t3">
+                  <div class="s5-head" style="background: #431407"><b style="background: #ef4444"></b><b style="background: #f59e0b"></b><b style="background: #10b981"></b></div>
+                  <div class="s5-body" style="background: #7c2d12"><span class="s5-line" style="width: 75%; background: #fff7ed; opacity: 0.5"></span><span class="s5-line" style="width: 50%; background: #fff7ed; opacity: 0.3"></span><span class="s5-bubble" style="background: #f59e0b"></span></div>
+                  <div class="s5-name">Sunset</div>
+                </div>
+                <div class="s5-card" id="s5-t4">
+                  <div class="s5-head" style="background: #082f49"><b style="background: #ef4444"></b><b style="background: #0ea5e9"></b><b style="background: #10b981"></b></div>
+                  <div class="s5-body" style="background: #0c4a6e"><span class="s5-line" style="width: 75%; background: #f0f9ff; opacity: 0.5"></span><span class="s5-line" style="width: 50%; background: #f0f9ff; opacity: 0.3"></span><span class="s5-bubble" style="background: #0ea5e9"></span></div>
+                  <div class="s5-name">Deep Ocean</div>
+                </div>
+              </div>
+              <div id="s5-ring"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 6 — Architecture: key stays server-side -->
+      <section id="s6" data-layout-allow-overlap data-layout-allow-occlusion class="clip" data-start="21.4" data-duration="3" data-track-index="6">
+        <div id="s6-wrap" class="wrap">
+          <div id="s6-inner">
+            <div id="s6-flow">
+              <div class="s6-node" id="s6-n1"><div class="lbl">React</div><div class="sub">Browser app</div></div>
+              <div class="s6-link" id="s6-l1"><b></b><span class="s6-pulse" id="s6-p1"></span></div>
+              <div class="s6-node key" id="s6-n2"><div class="lbl">FastAPI</div><div class="sub">Holds the API key</div></div>
+              <div class="s6-link" id="s6-l2"><b></b><span class="s6-pulse" id="s6-p2"></span></div>
+              <div class="s6-node" id="s6-n3"><div class="lbl">Gemini</div><div class="sub">Streams the reply</div></div>
+            </div>
+            <div id="s6-lock">
+              <div class="ico-box"><svg class="ico" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+              Your key never touches the browser
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 7 — End card -->
+      <section id="s7" data-layout-allow-overlap data-layout-allow-occlusion class="clip" data-start="24.2" data-duration="2.8" data-track-index="7">
+        <div id="s7-wrap" class="wrap center">
+          <div id="s7-orb-box">
+            <svg id="s7-orb" class="orb" viewBox="-80 -80 160 160">
+              <circle cx="0" cy="0" r="60" fill="url(#orbGradient)" />
+              <g id="s7-eyes">
+                <ellipse cx="-15" cy="0" rx="8" ry="12" fill="white" />
+                <ellipse cx="15" cy="0" rx="8" ry="12" fill="white" />
+              </g>
+            </svg>
+          </div>
+          <div id="s7-name">EchoBot</div>
+          <div id="s7-tag">Talk to it. Type to it. <em>Hear it back.</em></div>
+          <div id="s7-url">
+            <div class="ico-box"><svg class="ico" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></svg></div>
+            github.com/aaadnan259/EchobotVoiceAssistant
+          </div>
+          <div id="s7-stack">React · FastAPI · Gemini</div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const E = "power3.out";
+
+      // ---------- background: slow breathing bloom across the whole cut ----------
+      tl.fromTo("#bg-bloom", { scale: 0.8, opacity: 0.6 }, { scale: 1.15, opacity: 1, duration: 13.5, ease: "sine.inOut" }, 0);
+      tl.to("#bg-bloom", { scale: 0.9, opacity: 0.75, duration: 13.5, ease: "sine.inOut" }, 13.5);
+      tl.fromTo("#bg-grid", { y: 0 }, { y: -80, duration: 27, ease: "none" }, 0);
+
+      // ---------- Scene 1 (0 – 4.4) ----------
+      tl.fromTo("#s1-orb-box", { scale: 0.55, opacity: 0, y: 40 }, { scale: 1, opacity: 1, y: 0, duration: 1.1, ease: "back.out(1.6)" }, 0.1);
+      tl.to("#s1-orb-box", { y: -14, duration: 1.35, ease: "sine.inOut" }, 1.25);
+      tl.to("#s1-orb-box", { y: 0, duration: 1.4, ease: "sine.inOut" }, 2.6);
+      // eye glance + blink
+      tl.to("#s1-eyes", { x: -8, duration: 0.35, ease: "power2.out" }, 1.0);
+      tl.to("#s1-eyes", { x: 8, duration: 0.45, ease: "power2.inOut" }, 1.5);
+      tl.to("#s1-eyes", { x: 0, duration: 0.35, ease: "power2.out" }, 2.1);
+      tl.to("#s1-eyes", { scaleY: 0.1, transformOrigin: "50% 50%", duration: 0.07, ease: "power1.in" }, 2.7);
+      tl.to("#s1-eyes", { scaleY: 1, transformOrigin: "50% 50%", duration: 0.12, ease: "power1.out" }, 2.78);
+      tl.fromTo("#s1-w1", { y: 70, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: E }, 0.7);
+      tl.fromTo("#s1-w2", { y: 70, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: E }, 0.95);
+      tl.fromTo("#s1-sub", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: E }, 1.6);
+      tl.to("#s1-wrap", { opacity: 0, scale: 1.06, duration: 0.4, ease: "power2.in" }, 4.0);
+
+      // ---------- Scene 2 (4 – 8.9) ----------
+      tl.fromTo("#s2-wrap", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 4.0);
+      tl.fromTo("#s2-orb-box", { scale: 0.7, x: -60 }, { scale: 1, x: 0, duration: 0.8, ease: E }, 4.0);
+      ["#s2-ring1", "#s2-ring2", "#s2-ring3"].forEach((r, i) => {
+        tl.fromTo(r, { scale: 0.95, opacity: 0.7 }, { scale: 1.6, opacity: 0, duration: 1.3, ease: "power1.out", repeat: 2 }, 4.4 + i * 0.43);
+      });
+      // voice waveform: deterministic keyframes
+      const wave = document.getElementById("s2-wave");
+      const BARS = 21;
+      for (let i = 0; i < BARS; i++) {
+        const b = document.createElement("span");
+        b.className = "s2-bar";
+        b.id = "s2-bar" + i;
+        wave.appendChild(b);
+        const env = 1 - Math.abs(i - (BARS - 1) / 2) / ((BARS - 1) / 2) * 0.65;
+        const frames = [];
+        for (let k = 0; k < 16; k++) {
+          const v = 0.5 + 0.5 * Math.sin(k * 1.7 + i * 0.9) * Math.cos(k * 0.6 + i * 0.35);
+          frames.push({ scaleY: Math.max(0.12, env * (0.25 + 0.75 * v)), duration: 0.24, ease: "sine.inOut" });
+        }
+        tl.to(b, { keyframes: frames }, 4.4);
+      }
+      tl.fromTo("#s2-r1", { x: 80, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: E }, 4.5);
+      tl.fromTo("#s2-r2", { x: 80, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: E }, 5.5);
+      tl.fromTo("#s2-r3", { x: 80, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: E }, 6.5);
+      tl.to("#s2-r1 .s2-word", { color: "#61667e", duration: 0.4 }, 5.5);
+      tl.to("#s2-r2 .s2-word", { color: "#61667e", duration: 0.4 }, 6.5);
+      tl.to("#s2-wrap", { opacity: 0, duration: 0.4, ease: "power2.in" }, 8.5);
+
+      // ---------- Scene 3 (8.5 – 14.5) ----------
+      const prompt = "Explain a black hole in one sentence.";
+      const typed = document.getElementById("s3-typed");
+      prompt.split("").forEach((ch, i) => {
+        const s = document.createElement("span");
+        s.textContent = ch;
+        s.id = "s3-ch" + i;
+        typed.appendChild(s);
+      });
+      const reply = "A black hole is a region of space where gravity is so strong that nothing, not even light, can escape it.";
+      const replyEl = document.getElementById("s3-reply");
+      reply.split(" ").forEach((w, i, arr) => {
+        const s = document.createElement("span");
+        s.textContent = w + (i < arr.length - 1 ? " " : "");
+        replyEl.appendChild(s);
+      });
+
+      tl.fromTo("#s3-wrap", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 8.5);
+      tl.fromTo("#s3-window", { y: 90, scale: 0.94 }, { y: 0, scale: 1, duration: 0.9, ease: E }, 8.5);
+      tl.set("#s3-user", { opacity: 0 }, 8.5);
+      tl.set("#s3-botrow", { opacity: 0 }, 8.5);
+      tl.set("#s3-typed span", { opacity: 0 }, 8.5);
+      tl.set("#s3-reply span", { opacity: 0 }, 8.5);
+      tl.set("#s3-dots", { opacity: 0 }, 8.5);
+      tl.to("#s3-placeholder", { opacity: 0, duration: 0.1 }, 9.1);
+      tl.to("#s3-typed span", { opacity: 1, duration: 0.01, stagger: 0.035 }, 9.15);
+      // send
+      tl.fromTo("#s3-send", { scale: 1 }, { scale: 0.82, duration: 0.1, ease: "power2.in" }, 10.55);
+      tl.to("#s3-send", { scale: 1, duration: 0.25, ease: "back.out(3)" }, 10.65);
+      tl.to("#s3-typed", { opacity: 0, duration: 0.12 }, 10.65);
+      tl.to("#s3-placeholder", { opacity: 1, duration: 0.2 }, 10.8);
+      tl.fromTo("#s3-user", { opacity: 0, y: 40, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.6)", transformOrigin: "100% 100%" }, 10.7);
+      tl.fromTo("#s3-botrow", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 11.0);
+      tl.to("#s3-dots", { opacity: 1, duration: 0.15 }, 11.0);
+      tl.to("#s3-dots b", { y: -10, duration: 0.2, ease: "sine.out", stagger: 0.1, yoyo: true, repeat: 1 }, 11.05);
+      tl.to("#s3-dots", { opacity: 0, duration: 0.1 }, 11.55);
+      tl.fromTo("#s3-reply span", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.25, ease: "power2.out", stagger: 0.085 }, 11.6);
+      tl.fromTo("#s3-chip", { opacity: 0, y: -20, scale: 0.9 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(2)" }, 11.8);
+      tl.to("#s3-window", { scale: 1.03, duration: 2.2, ease: "sine.inOut" }, 11.8);
+      tl.to("#s3-wrap", { opacity: 0, y: -40, duration: 0.4, ease: "power2.in" }, 14.1);
+
+      // ---------- Scene 4 (14.1 – 18.4) ----------
+      tl.fromTo("#s4-wrap", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 14.1);
+      tl.fromTo("#s4-title", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: E }, 14.2);
+      ["#s4-c1", "#s4-c2", "#s4-c3", "#s4-c4"].forEach((c, i) => {
+        tl.fromTo(c, { y: 60, opacity: 0, scale: 0.94 }, { y: 0, opacity: 1, scale: 1, duration: 0.6, ease: E }, 14.7 + i * 0.45);
+        tl.fromTo(c + " .s4-icon", { rotation: -12, scale: 0.6 }, { rotation: 0, scale: 1, duration: 0.6, ease: "back.out(2.2)" }, 14.8 + i * 0.45);
+      });
+      tl.to("#s4-grid", { scale: 1.03, duration: 2.6, ease: "sine.inOut" }, 15.4);
+      tl.to("#s4-wrap", { opacity: 0, duration: 0.4, ease: "power2.in" }, 18.0);
+
+      // ---------- Scene 5 (18 – 21.6) ----------
+      tl.fromTo("#s5-wrap", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 18.0);
+      tl.set(["#s5-bg1", "#s5-bg2", "#s5-bg3"], { opacity: 0 }, 18.0);
+      tl.fromTo("#s5-title", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: E }, 18.1);
+      tl.fromTo(".s5-card", { y: 80, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: E, stagger: 0.08 }, 18.3);
+      // selection ring walks Midnight -> Forest -> Sunset -> Deep Ocean; background follows
+      const step = 340; // card width 300 + gap 40
+      tl.fromTo("#s5-ring", { x: step, opacity: 0 }, { x: step, opacity: 1, duration: 0.3 }, 18.8);
+      tl.to("#s5-ring", { x: step * 2, duration: 0.35, ease: "power3.inOut" }, 19.35);
+      tl.to("#s5-bg1", { opacity: 1, duration: 0.35 }, 19.35);
+      tl.to("#s5-ring", { x: step * 3, duration: 0.35, ease: "power3.inOut" }, 19.95);
+      tl.to("#s5-bg2", { opacity: 1, duration: 0.35 }, 19.95);
+      tl.to("#s5-ring", { x: step * 4, duration: 0.35, ease: "power3.inOut" }, 20.55);
+      tl.to("#s5-bg3", { opacity: 1, duration: 0.35 }, 20.55);
+      tl.to("#s5-wrap", { opacity: 0, duration: 0.4, ease: "power2.in" }, 21.2);
+
+      // ---------- Scene 6 (21.4 – 24.4) ----------
+      tl.fromTo("#s6-wrap", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 21.4);
+      tl.fromTo("#s6-n1", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: E }, 21.5);
+      tl.fromTo("#s6-l1 b", { scaleX: 0 }, { scaleX: 1, duration: 0.35, ease: "power2.inOut" }, 21.85);
+      tl.fromTo("#s6-n2", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: E }, 22.05);
+      tl.fromTo("#s6-l2 b", { scaleX: 0 }, { scaleX: 1, duration: 0.35, ease: "power2.inOut" }, 22.4);
+      tl.fromTo("#s6-n3", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: E }, 22.6);
+      tl.fromTo("#s6-p1", { x: 0, opacity: 0 }, { x: 150, opacity: 1, duration: 0.5, ease: "power1.inOut" }, 22.9);
+      tl.fromTo("#s6-p2", { x: 0, opacity: 0 }, { x: 150, opacity: 1, duration: 0.5, ease: "power1.inOut" }, 23.25);
+      tl.fromTo("#s6-lock", { y: 30, opacity: 0, scale: 0.95 }, { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 23.0);
+      tl.to("#s6-wrap", { opacity: 0, scale: 0.96, duration: 0.4, ease: "power2.in" }, 24.0);
+
+      // ---------- Scene 7 (24.2 – 27) — final frame, settles ----------
+      tl.fromTo("#s7-wrap", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 24.2);
+      tl.fromTo("#s7-orb-box", { scale: 0.5, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.8, ease: "back.out(1.7)" }, 24.2);
+      tl.fromTo("#s7-name", { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: E }, 24.45);
+      tl.fromTo("#s7-tag", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: E }, 24.8);
+      tl.fromTo("#s7-url", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: E }, 25.1);
+      tl.fromTo("#s7-stack", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 25.35);
+      tl.to("#s7-eyes", { scaleY: 0.1, transformOrigin: "50% 50%", duration: 0.07 }, 25.7);
+      tl.to("#s7-eyes", { scaleY: 1, transformOrigin: "50% 50%", duration: 0.12 }, 25.78);
+      tl.to("#s7-wrap", { opacity: 0, duration: 0.5, ease: "power1.in" }, 26.45);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
