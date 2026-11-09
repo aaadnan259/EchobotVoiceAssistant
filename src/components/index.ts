@@ -17,6 +17,7 @@ export { InputBar as InputArea } from './InputBar';
 export { default as OrbCanvas } from './OrbCanvas';
 export { default as KeyboardShortcuts } from './KeyboardShortcuts';
 export { default as Orb } from './Orb';
+export { default as EchoBotAvatar } from './EchoBot3D/EchoBotAvatar';
 export { default as SettingsModal } from './SettingsModal';
 export { SearchBar } from './SearchBar';
 export { SearchResults } from './SearchResults';

@@ -8,7 +8,7 @@ import {
     InputArea,
     SmartMessageList,
     SearchResults,
-    Orb as OrbComponent,
+    EchoBotAvatar,
     ImageDropZone,
     OrbErrorBoundary,
     SummaryPanel // Moving to ModalManager? No, keeping here if it's not a modal.
@@ -212,7 +212,7 @@ export const ChatInterface: React.FC = () => {
                     <div className="sticky top-0 z-10 w-full flex justify-center pt-20 pb-6 pointer-events-none">
                         <div className="relative">
                             <OrbErrorBoundary>
-                                <OrbComponent state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
+                                <EchoBotAvatar state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
                             </OrbErrorBoundary>
                         </div>
                     </div>
