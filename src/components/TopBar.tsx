@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { BotFace } from './EchoBot3D/BotFace';
 import { Mic, MicOff, Sun, Moon, Volume2, VolumeX, Download, Upload, Keyboard, RotateCcw, Save, Trash2, Settings, Search, X } from 'lucide-react';
 import { playSound } from '../constants';
 
@@ -82,21 +83,8 @@ export function TopBar({
           onClick={handleLogoClick}
           title="Reload Application"
         >
-          {/* Task 1: Fixed Logo - No white circle */}
-          <div className="w-10 h-10 rounded-full shadow-lg shadow-purple-500/40 overflow-hidden relative">
-            <svg viewBox="0 0 100 100" className="w-full h-full">
-              <defs>
-                <radialGradient id="logoGradient" cx="30%" cy="30%" r="70%">
-                  <stop offset="0%" stopColor="#d8b4fe" />
-                  <stop offset="50%" stopColor="#7c3aed" />
-                  <stop offset="100%" stopColor="#4c1d95" />
-                </radialGradient>
-              </defs>
-              <circle cx="50" cy="50" r="50" fill="url(#logoGradient)" />
-              <ellipse cx="35" cy="45" rx="6" ry="10" fill="white" transform="rotate(-10 35 45)" />
-              <ellipse cx="65" cy="45" rx="6" ry="10" fill="white" transform="rotate(10 65 45)" />
-            </svg>
-          </div>
+          {/* EchoBot logo: a still of the 3D mascot */}
+          <BotFace mood="neutral" className="w-10 h-10" label="EchoBot" />
           <span className="text-gray-900 dark:text-white font-medium tracking-wide text-lg hidden sm:block">EchoBot</span>
         </div>
 
