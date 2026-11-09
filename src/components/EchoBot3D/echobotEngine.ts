@@ -6,7 +6,9 @@
  */
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { OrbState } from '../../types';
+import type { BotMood } from '../../utils/botMood';
 
 /** Which clip loops underneath each chat state, and the one-shot played on entering it. */
 export const STATE_CLIPS: Record<OrbState, { base: string; loop: boolean; enter?: string }> = {
@@ -67,6 +69,8 @@ export class EchoBotEngine {
     private lastActivity = performance.now();
     private nextFidget = performance.now() + 20_000;
     private fx = { hop: -1, dance: -1, shake: -1 };
+    /** A held facial expression layered over the clips (used for a sympathetic, sad look). */
+    private expression = { until: 0, weight: 0 };
     private pokes: number[] = [];
     private lastPointer = { x: 0, y: 0, t: 0 };
     private lastScrub = 0;
@@ -86,7 +90,8 @@ export class EchoBotEngine {
         this.camera.lookAt(0, 1.72, 0);
         this.setupLights();
 
-        new GLTFLoader().load(
+        // the model is meshopt-compressed (~350 KB instead of 1.2 MB)
+        new GLTFLoader().setMeshoptDecoder(MeshoptDecoder).load(
             glbUrl,
             (gltf) => {
                 if (this.disposed) return;
@@ -171,6 +176,25 @@ export class EchoBotEngine {
         if (n >= 6) { this.playOnce('Angry'); this.fx.shake = now / 1000; this.pokes = []; }
         else if (n === 3) { this.fx.dance = now / 1000; this.playOnce('Happy'); }
         else if (n < 3) { this.fx.hop = now / 1000; this.playOnce('Happy'); }
+    }
+
+    /**
+     * React to how a finished reply felt: dance for thanks and good news, a hop and a smile
+     * for friendly replies, surprise for wow-facts, a curious look-around for questions,
+     * and a soft sad face for sorry/bad news. Only while EchoBot isn't busy.
+     */
+    react(mood: BotMood) {
+        if (!this.mixer || !this.isCalm()) return;
+        this.wake(false);
+        const t = performance.now() / 1000;
+        switch (mood) {
+            case 'excited': this.fx.dance = t; this.playOnce('Happy'); break;
+            case 'happy': this.fx.hop = t; this.playOnce('Happy'); break;
+            case 'surprised': this.playOnce('Surprised'); break;
+            case 'curious': this.playOnce('LookAround'); break;
+            case 'sad': if (this.oneShot) this.endOneShot(); this.expression.until = performance.now() + 6000; break;
+            default: break;
+        }
     }
 
     get glow() { return this.glowColor; }
@@ -362,6 +386,7 @@ export class EchoBotEngine {
         const openIdx = this.mouthMesh?.morphTargetDictionary?.Open ?? -1;
         const savedOpen = this.mouthMesh && openIdx >= 0 ? this.mouthMesh.morphTargetInfluences![openIdx] : 0;
         const savedEyes = this.eyes.map((e) => e.morphTargetInfluences!.slice());
+        const savedMouthMorphs = this.mouthMesh?.morphTargetInfluences?.slice();
 
         // audio: follow quickly on the way up, relax a bit slower
         const k = this.audio > this.smoothAudio ? 1 - Math.exp(-dt * 30) : 1 - Math.exp(-dt * 10);
@@ -383,6 +408,22 @@ export class EchoBotEngine {
             const d = e.morphTargetDictionary!, inf = e.morphTargetInfluences!;
             if (widen && d.Surprised !== undefined) inf[d.Surprised] = Math.min(1, inf[d.Surprised] + widen);
             if (pleased && d.Happy !== undefined) inf[d.Happy] = Math.max(inf[d.Happy], pleased);
+        }
+
+        // sad expression: eases in, holds, eases out; sad eyes and a small frown
+        const sadTarget = now < this.expression.until && !this.oneShot ? 1 : 0;
+        this.expression.weight += (sadTarget - this.expression.weight) * (1 - Math.exp(-dt * 5));
+        const sad = this.expression.weight;
+        if (sad > 0.01) {
+            for (const e of this.eyes) {
+                const d = e.morphTargetDictionary!, inf = e.morphTargetInfluences!;
+                if (d.Sad !== undefined) inf[d.Sad] = Math.max(inf[d.Sad], 0.85 * sad);
+            }
+            const frownIdx = this.mouthMesh?.morphTargetDictionary?.Frown ?? -1;
+            if (this.mouth && this.mouthMesh && frownIdx >= 0) {
+                this.mouth.scale.copy(MOUTH_SCALE).multiplyScalar(0.75 * sad);
+                this.mouthMesh.morphTargetInfluences![frownIdx] = sad;
+            }
         }
 
         // mouth follows the voice while responding
@@ -426,6 +467,7 @@ export class EchoBotEngine {
         this.pivot.quaternion.copy(savedPivot);
         if (this.mouth && savedMouth) this.mouth.scale.copy(savedMouth);
         if (this.mouthMesh && openIdx >= 0) this.mouthMesh.morphTargetInfluences![openIdx] = savedOpen;
+        if (this.mouthMesh && savedMouthMorphs) savedMouthMorphs.forEach((v, j) => { this.mouthMesh!.morphTargetInfluences![j] = v; });
         this.eyes.forEach((e, i) => { const inf = e.morphTargetInfluences!; savedEyes[i].forEach((v, j) => { inf[j] = v; }); });
     }
 }
