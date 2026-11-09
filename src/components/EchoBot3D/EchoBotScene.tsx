@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { OrbState } from '../../types';
 import { EchoBotEngine } from './echobotEngine';
+import type { BotMood } from '../../utils/botMood';
 import glbUrl from '../../assets/echobot/echobot.glb?url';
 
 export interface EchoBotSceneProps {
     state: OrbState;
     audioLevel: number;
+    /** A finished reply's mood; a new key triggers a new reaction. */
+    reaction?: { mood: BotMood; key: string } | null;
     onReady: () => void;
     onError: (e: unknown) => void;
 }
@@ -15,7 +18,7 @@ export interface EchoBotSceneProps {
  * The canvas ignores the mouse except while the pointer is over EchoBot's body,
  * so chat messages scrolling underneath stay clickable.
  */
-const EchoBotScene: React.FC<EchoBotSceneProps> = ({ state, audioLevel, onReady, onError }) => {
+const EchoBotScene: React.FC<EchoBotSceneProps> = ({ state, audioLevel, reaction, onReady, onError }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<EchoBotEngine | null>(null);
     const [ready, setReady] = useState(false);
@@ -74,6 +77,8 @@ const EchoBotScene: React.FC<EchoBotSceneProps> = ({ state, audioLevel, onReady,
 
     useEffect(() => { engineRef.current?.setState(state); }, [state]);
     useEffect(() => { engineRef.current?.setAudioLevel(audioLevel); }, [audioLevel]);
+    // runs after the state effect above, so it overrides the default "done talking" bounce
+    useEffect(() => { if (reaction) engineRef.current?.react(reaction.mood); }, [reaction?.key]);
 
     const color = GLOW_CSS[state] ?? GLOW_CSS[OrbState.IDLE];
     return (

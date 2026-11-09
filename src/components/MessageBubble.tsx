@@ -3,6 +3,7 @@ import React from 'react';
 import { Volume2, Copy, ThumbsUp, ThumbsDown, Star, RefreshCw } from 'lucide-react';
 import { Message } from '../types';
 import { BotFace } from './EchoBot3D/BotFace';
+import { replyFaceMood } from '../utils/botMood';
 
 interface MessageBubbleProps {
   message: Message;
@@ -58,7 +59,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       {/* Bot Avatar - Only for bot messages, on LEFT */}
       {isBot && (
         <div className="flex-shrink-0 mr-3 mt-1">
-          <BotFace mood={isStreaming ? 'talking' : message.isError ? 'sad' : 'happy'} className="w-8 h-8" />
+          <BotFace mood={isStreaming ? 'talking' : message.isError ? 'sad' : replyFaceMood(message.text)} className="w-8 h-8" />
         </div>
       )}
 

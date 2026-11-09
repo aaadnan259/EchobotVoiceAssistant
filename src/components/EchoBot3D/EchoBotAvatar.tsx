@@ -2,11 +2,13 @@ import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import Orb from '../Orb';
 import { OrbState } from '../../types';
 import type { EchoBotSceneProps } from './EchoBotScene';
+import type { BotMood } from '../../utils/botMood';
 
 interface EchoBotAvatarProps {
     state: OrbState;
     scrollProgress: number;
     audioLevel?: number;
+    reaction?: { mood: BotMood; key: string } | null;
 }
 
 /** True when the browser can draw WebGL and the visitor hasn't asked for reduced motion. */
@@ -41,7 +43,7 @@ const EchoBotScene = lazy(() =>
  * shown while it loads and kept as the fallback (no WebGL, reduced motion, load errors).
  * Drop-in replacement for <Orb>: same props, same footprint in the layout.
  */
-const EchoBotAvatar: React.FC<EchoBotAvatarProps> = ({ state, scrollProgress, audioLevel = 0 }) => {
+const EchoBotAvatar: React.FC<EchoBotAvatarProps> = ({ state, scrollProgress, audioLevel = 0, reaction = null }) => {
     const [mode, setMode] = useState<'loading' | 'ready' | 'fallback'>(() => (canUse3D() ? 'loading' : 'fallback'));
     const [orbVisible, setOrbVisible] = useState(true);
 
@@ -59,8 +61,17 @@ const EchoBotAvatar: React.FC<EchoBotAvatarProps> = ({ state, scrollProgress, au
         return () => clearTimeout(t);
     }, [mode]);
 
+    // shrink toward the top as the chat scrolls, so it covers less text
+    // (it stays below the top bar, which overlaps the top of the chat area)
+    const p = Math.min(1, Math.max(0, scrollProgress || 0));
+    const shrink = { transform: `scale(${1 - p * 0.45})`, transformOrigin: '50% 0%' };
+
     return (
-        <div className="relative w-40 h-40 md:w-48 md:h-48 flex items-center justify-center">
+        <div
+            className="relative w-40 h-40 md:w-48 md:h-48 flex items-center justify-center transition-transform duration-200 ease-out"
+            style={shrink}
+            data-testid="echobot-avatar"
+        >
             {orbVisible && (
                 <div
                     className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
@@ -73,7 +84,7 @@ const EchoBotAvatar: React.FC<EchoBotAvatarProps> = ({ state, scrollProgress, au
                 // a little bigger than the orb's box so the echo rings and hops have room, without moving the layout
                 <div className="absolute -inset-8 md:-inset-10">
                     <Suspense fallback={null}>
-                        <EchoBotScene state={state} audioLevel={audioLevel} onReady={onReady} onError={onError} />
+                        <EchoBotScene state={state} audioLevel={audioLevel} reaction={reaction} onReady={onReady} onError={onError} />
                     </Suspense>
                 </div>
             )}

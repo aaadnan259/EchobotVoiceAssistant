@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
     OrbState
@@ -19,6 +19,7 @@ import { useUI } from '../../contexts/UIContext';
 import { useSettings } from '../../hooks';
 import { useScrollBehavior, useAudioAnalyzer, useKeyboardShortcuts } from '../../hooks';
 import { CHAT_MESSAGES, MESSAGE_LIMITS } from '../../constants';
+import { detectMood, BotMood } from '../../utils/botMood';
 
 const { SUCCESS, ERRORS, CONFIRMATIONS } = CHAT_MESSAGES;
 // VirtualizedMessageList currently renders blank: its AutoSizer parent
@@ -97,6 +98,20 @@ export const ChatInterface: React.FC = () => {
     // And: <div ref={messagesEndRef} className="h-4" />
     // useScrollBehavior implementation might expect bottomRef to be the element at bottom.
     // Let's use bottomRef for the empty div at bottom.
+
+    // --- EchoBot's reaction to each finished reply ---
+    const [botReaction, setBotReaction] = useState<{ mood: BotMood; key: string } | null>(null);
+    const prevOrbState = useRef(orbState);
+    useEffect(() => {
+        const finished = prevOrbState.current === OrbState.RESPONDING && orbState === OrbState.IDLE;
+        prevOrbState.current = orbState;
+        if (!finished) return;
+        const lastBot = [...messages].reverse().find((m) => m.role === 'model');
+        if (!lastBot || lastBot.isError) return;
+        const idx = messages.lastIndexOf(lastBot);
+        const lastUser = [...messages.slice(0, idx)].reverse().find((m) => m.role === 'user');
+        setBotReaction({ mood: detectMood(lastUser?.text, lastBot.text), key: `${lastBot.id}:${Date.now()}` });
+    }, [orbState, messages]);
 
     // --- Audio Analyzer ---
     const audioLevel = useAudioAnalyzer(
@@ -212,7 +227,7 @@ export const ChatInterface: React.FC = () => {
                     <div className="sticky top-0 z-10 w-full flex justify-center pt-20 pb-6 pointer-events-none">
                         <div className="relative">
                             <OrbErrorBoundary>
-                                <EchoBotAvatar state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} />
+                                <EchoBotAvatar state={orbState} scrollProgress={scrollProgress} audioLevel={audioLevel} reaction={botReaction} />
                             </OrbErrorBoundary>
                         </div>
                     </div>
