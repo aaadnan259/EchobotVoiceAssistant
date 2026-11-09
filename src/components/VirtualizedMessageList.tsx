@@ -44,6 +44,8 @@ interface VirtualizedMessageListProps {
     autoScrollToBottom?: boolean;
     /** Show typing indicator */
     isTyping?: boolean;
+    /** Id of the bot reply that is still being written (its avatar shows the talking face) */
+    streamingMessageId?: string | null;
 }
 
 // Cache for measured item heights
@@ -66,9 +68,11 @@ const MessageRow = memo(({
     getSiblingInfo,
     onNavigateBranch,
     onBranchCreate,
-    onReaction
+    onReaction,
+    isStreaming
 }: {
     message: Message;
+    isStreaming?: boolean;
     onSpeak: (text: string) => void;
     onReaction?: (messageId: string, reaction: 'thumbsUp' | 'thumbsDown' | 'starred') => void;
 
@@ -102,6 +106,7 @@ const MessageRow = memo(({
                         siblingInfo={getSiblingInfo?.(message.id)}
                         onNavigateBranch={onNavigateBranch ? (dir: any) => onNavigateBranch(message.id, dir) : undefined}
                         onBranchCreate={onBranchCreate ? () => onBranchCreate(message.id) : undefined}
+                        isStreaming={isStreaming}
                     />
                 </MessageErrorBoundary>
             </div>
@@ -129,7 +134,8 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
     onBranchCreate,
     estimatedItemSize = DEFAULT_ITEM_HEIGHT,
     autoScrollToBottom = true,
-    isTyping
+    isTyping,
+    streamingMessageId
 }) => {
     const listRef = useRef<any>(null);
     const outerRef = useRef<HTMLDivElement>(null);
@@ -243,9 +249,10 @@ export const VirtualizedMessageList: React.FC<VirtualizedMessageListProps> = ({
 
                 setHeight={setItemHeight}
                 style={style}
+                isStreaming={message.id === streamingMessageId}
             />
         );
-    }, [messages, onSpeak, setItemHeight]);
+    }, [messages, onSpeak, setItemHeight, streamingMessageId]);
 
     // Item key for React reconciliation
     const getItemKey = useCallback((index: number) => {
@@ -296,6 +303,7 @@ export const SimpleMessageList: React.FC<{
     onNavigateBranch?: (id: string, direction: 'prev' | 'next') => void;
     onBranchCreate?: (id: string) => void;
     isTyping?: boolean;
+    streamingMessageId?: string | null;
 }> = memo((props) => (
     <>
         {props.messages.map(msg => (
@@ -307,6 +315,7 @@ export const SimpleMessageList: React.FC<{
                     siblingInfo={props.getSiblingInfo?.(msg.id)}
                     onNavigateBranch={props.onNavigateBranch ? (dir: any) => props.onNavigateBranch?.(msg.id, dir) : undefined}
                     onBranchCreate={props.onBranchCreate ? () => props.onBranchCreate?.(msg.id) : undefined}
+                    isStreaming={msg.id === props.streamingMessageId}
                 />
             </MessageErrorBoundary>
         ))}
@@ -334,6 +343,7 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
     onBranchCreate,
 
     isTyping,
+    streamingMessageId,
     virtualizationThreshold = 50,
     ...props
 }) => {
@@ -348,6 +358,7 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
                     onNavigateBranch={onNavigateBranch}
                     onBranchCreate={onBranchCreate}
                     isTyping={isTyping}
+                    streamingMessageId={streamingMessageId}
                 />
             );
         }
@@ -362,6 +373,7 @@ export const SmartMessageList: React.FC<VirtualizedMessageListProps & {
                 onNavigateBranch={onNavigateBranch}
                 onBranchCreate={onBranchCreate}
                 isTyping={isTyping}
+                streamingMessageId={streamingMessageId}
                 {...props}
             />
         );

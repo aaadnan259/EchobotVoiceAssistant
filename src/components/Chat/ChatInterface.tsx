@@ -234,6 +234,11 @@ export const ChatInterface: React.FC = () => {
                             <SmartMessageList
                                 messages={messages}
                                 isTyping={orbState === OrbState.THINKING}
+                                streamingMessageId={
+                                    isGenerating && messages[messages.length - 1]?.role === 'model'
+                                        ? messages[messages.length - 1].id
+                                        : null
+                                }
                                 onSpeak={speak}
                                 onReaction={addReaction}
                                 getSiblingInfo={getSiblingInfo}

@@ -59,6 +59,8 @@ describe('useChat', () => {
         expect(result.current.isGenerating).toBe(false);
         expect(updateId).toBe('placeholder-id');
         expect(updateData.text).toContain(expectedMessage);
+        // flagged so the reply avatar can show EchoBot's sad face
+        expect(updateData.isError).toBe(true);
     });
 
     it('sets isGenerating to true during stream and resets to false on success', async () => {
