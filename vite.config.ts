@@ -90,6 +90,10 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'build',
+    // The 3D EchoBot chunk (three.js, ~590 kB / ~153 kB gzipped) is lazy-loaded only when
+    // the 3D avatar is shown, so it never delays first paint. three.js can't be split much
+    // further, so the warning limit sits just above it; every other chunk stays well under 500 kB.
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         // Data-driven split (F15): measured with rollup-plugin-visualizer against
