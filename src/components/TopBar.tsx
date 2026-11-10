@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { BotFace } from './EchoBot3D/BotFace';
-import { Mic, MicOff, Sun, Moon, Volume2, VolumeX, Download, Upload, Keyboard, RotateCcw, Save, Trash2, Settings, Search, X } from 'lucide-react';
+import { Mic, MicOff, Sun, Moon, Volume2, VolumeX, Download, Upload, Keyboard, RotateCcw, Save, Trash2, Settings, Search, X, Gift } from 'lucide-react';
 import { playSound } from '../constants';
 
 interface TopBarProps {
@@ -20,6 +20,7 @@ interface TopBarProps {
   onImportClick: () => void;
   onShortcutsClick: () => void;
   onSummarizeClick: () => void;
+  onDownloadsClick?: () => void;
 
   // Search Props
   searchQuery: string;
@@ -41,6 +42,7 @@ export function TopBar({
   onImportClick,
   onShortcutsClick,
   onSummarizeClick,
+  onDownloadsClick,
   searchQuery,
   onSearchChange
 }: TopBarProps) {
@@ -128,6 +130,18 @@ export function TopBar({
               <Search className="w-5 h-5 text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
             </button>
           </div>
+
+          {/* Downloads: the desktop pet, stickers and more */}
+          {onDownloadsClick && (
+            <button
+              onClick={onDownloadsClick}
+              className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors group"
+              title="Get EchoBot: desktop pet, stickers and more"
+              aria-label="Downloads"
+            >
+              <Gift className="w-5 h-5 text-purple-500 group-hover:text-purple-600 dark:group-hover:text-purple-300 transition-colors" />
+            </button>
+          )}
 
           {/* Save */}
           <button
