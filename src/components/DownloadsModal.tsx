@@ -59,7 +59,7 @@ export const DOWNLOADS: DownloadItem[] = [
     {
         id: 'ar',
         title: 'EchoBot in AR',
-        blurb: 'Open on an iPhone or iPad and tap AR to put EchoBot on your table.',
+        blurb: 'Open on an iPhone or iPad and tap AR to put EchoBot on your table. Tap it to change its mood.',
         file: 'EchoBot-AR.usdz',
         meta: 'iPhone / iPad',
         img: arImg,
