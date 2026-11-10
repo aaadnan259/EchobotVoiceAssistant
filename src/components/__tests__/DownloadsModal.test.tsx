@@ -14,12 +14,12 @@ describe('DownloadsModal', () => {
         expect(container.firstChild).toBeNull();
     });
 
-    it('links every item to its release asset', () => {
+    it('links every item to its file on the site', () => {
         render(<DownloadsModal isOpen onClose={() => {}} />);
         for (const d of DOWNLOADS) {
             const link = screen.getByRole('link', { name: `Download ${d.title}` });
             expect(link.getAttribute('href')).toBe(
-                `https://github.com/aaadnan259/EchobotVoiceAssistant/releases/download/pet-v1/${d.file}`,
+                `/downloads/${d.file}`,
             );
         }
     });

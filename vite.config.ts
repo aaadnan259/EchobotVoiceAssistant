@@ -40,6 +40,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // let the big download files and the API go straight to the server
+        navigateFallbackDenylist: [/^\/downloads\//, /^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

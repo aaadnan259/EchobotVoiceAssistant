@@ -11,8 +11,8 @@ interface DownloadsModalProps {
     onClose: () => void;
 }
 
-/** Files live as assets on the "pet-v1" GitHub release, so the site repo stays free of binaries. */
-const RELEASE = 'https://github.com/aaadnan259/EchobotVoiceAssistant/releases/download/pet-v1/';
+/** The files live in public/downloads and are served by the site itself. */
+const RELEASE = '/downloads/';
 
 export interface DownloadItem {
     id: string;
