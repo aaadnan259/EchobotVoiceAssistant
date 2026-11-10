@@ -81,6 +81,7 @@ export const ChatInterface: React.FC = () => {
         setImportOpen,
         setSummaryOpen,
         setShortcutsOpen,
+        setDownloadsOpen,
         isShortcutsOpen // for keyboard shortcut toggle
     } = useUI();
 
@@ -168,6 +169,7 @@ export const ChatInterface: React.FC = () => {
             setImportOpen(false);
             setShortcutsOpen(false);
             setSummaryOpen(false);
+            setDownloadsOpen(false);
             clearSearch();
         },
         'mod+shift+v': handleMicClick,
@@ -192,6 +194,7 @@ export const ChatInterface: React.FC = () => {
                 onExportClick={() => setExportOpen(true)}
                 onImportClick={() => setImportOpen(true)}
                 onShortcutsClick={() => setShortcutsOpen(true)}
+                onDownloadsClick={() => setDownloadsOpen(true)}
                 onSummarizeClick={() => setSummaryOpen(true)}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}

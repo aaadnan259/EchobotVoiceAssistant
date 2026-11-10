@@ -27,6 +27,7 @@ export { TypingIndicator } from './TypingIndicator';
 export { ExportModal } from './ExportModal';
 export { ImportModal } from './ImportModal';
 export { ShortcutsModal } from './ShortcutsModal';
+export { DownloadsModal } from './DownloadsModal';
 export { ThemePicker } from './ThemePicker';
 export { VoiceSettings } from './VoiceSettings';
 export { ImageDropZone } from './ImageDropZone';

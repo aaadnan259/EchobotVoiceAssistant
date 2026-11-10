@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
 interface UIContextType {
@@ -12,6 +12,8 @@ interface UIContextType {
     setSummaryOpen: (open: boolean) => void;
     isShortcutsOpen: boolean;
     setShortcutsOpen: (open: boolean) => void;
+    isDownloadsOpen: boolean;
+    setDownloadsOpen: (open: boolean) => void;
     isOnline: boolean;
     isDragging: boolean;
     setDragging: (dragging: boolean) => void;
@@ -26,6 +28,21 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isSummaryOpen, setSummaryOpen] = useState(false);
     const [isShortcutsOpen, setShortcutsOpen] = useState(false);
     const [isDragging, setDragging] = useState(false);
+    // a shared link to the site ending in #downloads opens the downloads straight away
+    const [isDownloadsOpen, setDownloadsOpenState] = useState(
+        () => typeof window !== 'undefined' && window.location.hash === '#downloads'
+    );
+    useEffect(() => {
+        const onHash = () => { if (window.location.hash === '#downloads') setDownloadsOpenState(true); };
+        window.addEventListener('hashchange', onHash);
+        return () => window.removeEventListener('hashchange', onHash);
+    }, []);
+    const setDownloadsOpen = (open: boolean) => {
+        setDownloadsOpenState(open);
+        if (!open && typeof window !== 'undefined' && window.location.hash === '#downloads') {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+    };
 
     const isOnline = useOnlineStatus();
 
@@ -40,6 +57,8 @@ export const UIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
         setSummaryOpen,
         isShortcutsOpen,
         setShortcutsOpen,
+        isDownloadsOpen,
+        setDownloadsOpen,
         isOnline,
         isDragging,
         setDragging
