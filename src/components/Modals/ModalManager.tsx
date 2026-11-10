@@ -5,6 +5,7 @@ import {
     ExportModal,
     ImportModal,
     ShortcutsModal,
+    DownloadsModal,
     SummaryPanel,
     SettingsErrorBoundary
 } from '..';
@@ -24,7 +25,9 @@ export const ModalManager: React.FC = () => {
         isSummaryOpen,
         setSummaryOpen,
         isShortcutsOpen,
-        setShortcutsOpen
+        setShortcutsOpen,
+        isDownloadsOpen,
+        setDownloadsOpen
     } = useUI();
 
     const { settings, setSettings } = useSettingsContext(); // Assuming setSettings is exposed or updateSettings
@@ -85,6 +88,11 @@ export const ModalManager: React.FC = () => {
             <ShortcutsModal
                 isOpen={isShortcutsOpen}
                 onClose={() => setShortcutsOpen(false)}
+            />
+
+            <DownloadsModal
+                isOpen={isDownloadsOpen}
+                onClose={() => setDownloadsOpen(false)}
             />
 
             <SummaryPanel

@@ -23,7 +23,7 @@ export const STORAGE_KEYS = {
 
 export const API_CONFIG = {
     /** Gemini model to use */
-    MODEL_NAME: 'gemini-2.5-flash',
+    MODEL_NAME: 'gemini-3.6-flash',
 
     /** Base URL for API endpoints */
     API_BASE_URL: '/api',

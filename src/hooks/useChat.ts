@@ -111,7 +111,7 @@ export function useChat({
 
                 const errorMessage = ERROR_CODE_MESSAGES[error.message] ?? ERRORS.GENERIC;
 
-                updateMessage(botMsgId, { text: errorMessage });
+                updateMessage(botMsgId, { text: errorMessage, isError: true });
 
                 setTimeout(() => updateOrbState(OrbState.IDLE), ERROR_DISPLAY_DURATION);
             } else {

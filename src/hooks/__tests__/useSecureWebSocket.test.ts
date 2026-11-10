@@ -216,6 +216,9 @@ describe('useSecureWebSocket', () => {
         });
         
         const ws = MockWebSocket.instances[MockWebSocket.instances.length - 1];
+        // authenticate() awaits a dynamic import and the token before sending, which can
+        // take longer than one act() flush on a busy runner, so wait for the auth message
+        await vi.waitFor(() => expect(ws.send).toHaveBeenCalledTimes(1));
         
         await act(async () => {
             if (ws.onmessage) {
@@ -249,8 +252,8 @@ describe('useSecureWebSocket', () => {
         
         const ws = MockWebSocket.instances[MockWebSocket.instances.length - 1];
         
-        // WS sends auth message on open
-        expect(ws.send).toHaveBeenCalled();
+        // WS sends auth message on open (after the async token lookup)
+        await vi.waitFor(() => expect(ws.send).toHaveBeenCalled());
         const sentMessage = (ws.send as any).mock.calls[0][0];
         const parsed = JSON.parse(sentMessage);
         

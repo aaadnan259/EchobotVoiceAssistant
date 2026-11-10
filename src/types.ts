@@ -25,6 +25,8 @@ export interface Message {
     starred?: boolean;
   };
   feedback?: string;
+  /** True when this bot message is an error notice rather than a real reply. */
+  isError?: boolean;
   parentId?: string | null;
   branchId?: string;
 }

@@ -2,6 +2,8 @@
 import React from 'react';
 import { Volume2, Copy, ThumbsUp, ThumbsDown, Star, RefreshCw } from 'lucide-react';
 import { Message } from '../types';
+import { BotFace } from './EchoBot3D/BotFace';
+import { replyFaceMood } from '../utils/botMood';
 
 interface MessageBubbleProps {
   message: Message;
@@ -13,6 +15,8 @@ interface MessageBubbleProps {
   siblingInfo?: { current: number; total: number; hasPrev: boolean; hasNext: boolean } | null;
   onNavigateBranch?: (direction: 'prev' | 'next') => void;
   onBranchCreate?: () => void;
+  /** This reply is still being written: show the talking face. */
+  isStreaming?: boolean;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
@@ -25,6 +29,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   siblingInfo,
   onNavigateBranch,
   onBranchCreate,
+  isStreaming = false,
 }) => {
   const isUser = message.role === 'user';
   const isBot = message.role === 'model';
@@ -54,12 +59,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
       {/* Bot Avatar - Only for bot messages, on LEFT */}
       {isBot && (
         <div className="flex-shrink-0 mr-3 mt-1">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center shadow-lg shadow-purple-500/30">
-            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="9" cy="11" r="2.5" />
-              <circle cx="15" cy="11" r="2.5" />
-            </svg>
-          </div>
+          <BotFace mood={isStreaming ? 'talking' : message.isError ? 'sad' : replyFaceMood(message.text)} className="w-8 h-8" />
         </div>
       )}
 

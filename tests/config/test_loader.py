@@ -33,7 +33,7 @@ class TestConfigLoaderModelFallback(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             ConfigLoader._inject_env_vars()
 
-        self.assertEqual(ConfigLoader._settings["ai"]["llm_model"], "gemini-2.5-flash")
+        self.assertEqual(ConfigLoader._settings["ai"]["llm_model"], "gemini-3.6-flash")
 
     def test_gemini_model_env_var_still_takes_precedence(self):
         """The GEMINI_MODEL env var override is unaffected by this fix -- it must

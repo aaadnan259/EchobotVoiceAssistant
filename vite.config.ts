@@ -40,6 +40,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // let the big download files and the API go straight to the server
+        navigateFallbackDenylist: [/^\/downloads\//, /^\/api\//],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -90,6 +92,11 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'build',
+    // The 3D EchoBot chunk (three.js + the meshopt decoder, ~615 kB / ~160 kB gzipped) is
+    // lazy-loaded only when the 3D avatar is shown, so it never delays first paint. three.js
+    // can't be split much further, so the warning limit sits just above it; every other
+    // chunk stays well under 500 kB.
+    chunkSizeWarningLimit: 650,
     rollupOptions: {
       output: {
         // Data-driven split (F15): measured with rollup-plugin-visualizer against

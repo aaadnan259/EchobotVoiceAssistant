@@ -88,7 +88,7 @@ class TestLLMServiceInit(unittest.TestCase):
 
         service = self.LLMService()
 
-        self.assertEqual(service.model_name, "gemini-2.5-flash")
+        self.assertEqual(service.model_name, "gemini-3.6-flash")
 
     def test_google_client_init(self):
         """Test Google Client initialization."""
@@ -102,7 +102,7 @@ class TestLLMServiceInit(unittest.TestCase):
 
         self.mock_genai.Client.assert_called_once_with(api_key="fake_google_key")
         self.assertIsNotNone(service.client)
-        self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-2.5-flash")
+        self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-3.6-flash")
 
     def test_openai_client_init(self):
         """Test OpenAI Client initialization."""

@@ -160,7 +160,7 @@ async def rate_limit_handler(request: StarletteRequest, exc: RateLimitExceeded):
     )
 
 class ChatRequest(BaseModel):
-    modelName: str = "gemini-2.5-flash"
+    modelName: str = "gemini-3.6-flash"
     systemInstruction: str
     history: List[Dict[str, Any]]
     newMessage: str
@@ -187,9 +187,9 @@ def decode_image(base64_string: str):
 
 # Model allowlist (D4) — env-configurable
 ALLOWED_MODELS = [m.strip() for m in os.environ.get(
-    "GEMINI_ALLOWED_MODELS", "gemini-2.5-flash,gemini-2.5-flash-lite"
+    "GEMINI_ALLOWED_MODELS", "gemini-3.6-flash,gemini-3.5-flash-lite,gemini-2.5-flash,gemini-2.5-flash-lite"
 ).split(",")]
-DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", ConfigLoader.get("ai.llm_model", "gemini-2.5-flash"))
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", ConfigLoader.get("ai.llm_model", "gemini-3.6-flash"))
 
 def get_validated_model(requested: str) -> str:
     """Return requested model if allowed, else default. Log rejected requests."""
