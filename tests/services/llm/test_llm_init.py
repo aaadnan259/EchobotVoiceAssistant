@@ -100,7 +100,7 @@ class TestLLMServiceInit(unittest.TestCase):
 
         service = self.LLMService()
 
-        self.mock_genai.Client.assert_called_once_with(api_key="fake_google_key")
+        self.mock_genai.Client.assert_called_once_with(api_key="fake_google_key", http_options={"api_version": "v1beta"})
         self.assertIsNotNone(service.client)
         self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-3.6-flash")
 

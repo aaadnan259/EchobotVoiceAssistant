@@ -21,7 +21,7 @@ class LLMService:
             self.api_key = ConfigLoader.get("ai.google_api_key")
             if self.api_key:
                 try:
-                    self.client = genai.Client(api_key=self.api_key)
+                    self.client = genai.Client(api_key=self.api_key, http_options={"api_version": "v1beta"})
                     logger.info(f"Initialized Google Gemini Client with model: {self.model_name}")
                 except Exception as e:
                     logger.error(f"Failed to initialize Google Gemini Client: {e}")
