@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
-import Orb from '../Orb';
+import { BotFace, type BotMood as FaceMood } from './BotFace';
 import { OrbState } from '../../types';
 import type { EchoBotSceneProps } from './EchoBotScene';
 import type { BotMood } from '../../utils/botMood';
@@ -28,7 +28,7 @@ export function canUse3D(): boolean {
 }
 
 // three.js (~150 KB gzipped) and the model only download when the 3D bot is actually shown.
-// If the chunk can't load (offline, flaky network), report it and fall back to the classic orb.
+// If the chunk can't load (offline, flaky network), report it and fall back to the still image.
 const EchoBotScene = lazy(() =>
     import('./EchoBotScene').catch(() => ({
         default: ({ onError }: EchoBotSceneProps) => {
@@ -38,26 +38,34 @@ const EchoBotScene = lazy(() =>
     })),
 );
 
+/** Which still of the 3D bot to show for the chat state when the 3D scene isn't running. */
+function stillMood(state: OrbState): FaceMood {
+    if (state === OrbState.ERROR) return 'sad';
+    if (state === OrbState.RESPONDING) return 'talking';
+    return 'neutral';
+}
+
 /**
- * EchoBot's face on the chat screen: the interactive 3D mascot, with the classic SVG orb
- * shown while it loads and kept as the fallback (no WebGL, reduced motion, load errors).
- * Drop-in replacement for <Orb>: same props, same footprint in the layout.
+ * EchoBot's face on the chat screen: the interactive 3D mascot, with a still image of the
+ * same bot shown while it loads and kept as the fallback (no WebGL, reduced motion, load
+ * errors). The still is rendered from the same model, so a hard refresh never shows the
+ * old orb before the 3D bot fades in.
  */
 const EchoBotAvatar: React.FC<EchoBotAvatarProps> = ({ state, scrollProgress, audioLevel = 0, reaction = null }) => {
     const [mode, setMode] = useState<'loading' | 'ready' | 'fallback'>(() => (canUse3D() ? 'loading' : 'fallback'));
-    const [orbVisible, setOrbVisible] = useState(true);
+    const [stillVisible, setStillVisible] = useState(true);
 
     const onReady = useCallback(() => setMode((m) => (m === 'fallback' ? m : 'ready')), []);
     const onError = useCallback((e: unknown) => {
-        console.warn('EchoBot 3D unavailable, using the classic orb', e);
+        console.warn('EchoBot 3D unavailable, using the still image', e);
         setMode('fallback');
-        setOrbVisible(true);
+        setStillVisible(true);
     }, []);
 
-    // let the 3D bot fade in over the orb, then stop rendering the orb
+    // let the 3D bot fade in over the still, then stop rendering the still
     useEffect(() => {
         if (mode !== 'ready') return;
-        const t = setTimeout(() => setOrbVisible(false), 600);
+        const t = setTimeout(() => setStillVisible(false), 600);
         return () => clearTimeout(t);
     }, [mode]);
 
@@ -72,12 +80,13 @@ const EchoBotAvatar: React.FC<EchoBotAvatarProps> = ({ state, scrollProgress, au
             style={shrink}
             data-testid="echobot-avatar"
         >
-            {orbVisible && (
+            {stillVisible && (
                 <div
                     className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
                     style={{ opacity: mode === 'ready' ? 0 : 1 }}
+                    data-testid="echobot-still"
                 >
-                    <Orb state={state} scrollProgress={scrollProgress} audioLevel={audioLevel} />
+                    <BotFace mood={mode === 'fallback' ? stillMood(state) : 'neutral'} className={STILL_SIZE} />
                 </div>
             )}
             {mode !== 'fallback' && (
@@ -91,5 +100,8 @@ const EchoBotAvatar: React.FC<EchoBotAvatarProps> = ({ state, scrollProgress, au
         </div>
     );
 };
+
+// sized to match how big the bot sits in the 3D canvas, so the crossfade doesn't jump
+const STILL_SIZE = 'w-28 h-28 md:w-36 md:h-36';
 
 export default EchoBotAvatar;

@@ -7,6 +7,19 @@
   <title>EchoBot</title>
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <script>
+    // Paint the saved theme's background before the app loads, so a hard refresh
+    // doesn't flash white first. Colors mirror src/utils/themes.ts (default: dark).
+    (function () {
+      var bg = { light: '#f9fafb', dark: '#0B0D18', forest: '#022c22', sunset: '#431407', ocean: '#082f49' };
+      var id = 'dark';
+      try { id = (JSON.parse(localStorage.getItem('echoBotSettings') || '{}').theme) || id; } catch (e) { }
+      var root = document.documentElement;
+      if (!bg[id]) id = 'light'; // same fallback as getThemeById
+      root.style.setProperty('--theme-bg', bg[id]);
+      if (id !== 'light') root.classList.add('dark');
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">

@@ -13,13 +13,15 @@ describe('EchoBotAvatar', () => {
         vi.restoreAllMocks();
     });
 
-    it('falls back to the classic orb when WebGL is unavailable', () => {
+    it('falls back to a still of the 3D bot (not the old orb) when WebGL is unavailable', () => {
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
         const { container, queryByTestId } = render(
             React.createElement(EchoBotAvatar, { state: OrbState.IDLE, scrollProgress: 0, audioLevel: 0 }),
         );
         expect(queryByTestId('echobot-3d')).toBeNull();
-        expect(container.querySelector('svg')).not.toBeNull();
+        expect(queryByTestId('echobot-still')).not.toBeNull();
+        expect(container.querySelector('img')).not.toBeNull();
+        expect(container.querySelector('svg')).toBeNull();
     });
 
     it('skips 3D when the visitor prefers reduced motion', () => {
