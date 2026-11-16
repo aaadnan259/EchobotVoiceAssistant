@@ -4,7 +4,6 @@
       "type": "module",
       "private": true,
       "dependencies": {
-            "@google/genai": "^1.35.0",
             "@radix-ui/react-accordion": "^1.2.3",
             "@radix-ui/react-alert-dialog": "^1.1.6",
             "@radix-ui/react-aspect-ratio": "^1.1.2",
@@ -37,11 +36,8 @@
             "class-variance-authority": "^0.7.1",
             "clsx": "^2.1.1",
             "cmdk": "^1.1.1",
-            "cors": "^2.8.5",
             "dompurify": "^3.3.1",
-            "dotenv": "^17.2.3",
             "embla-carousel-react": "^8.6.0",
-            "express": "^5.2.1",
             "framer-motion": "^12.23.25",
             "input-otp": "^1.4.2",
             "lucide-react": "^0.487.0",
@@ -61,8 +57,7 @@
             "tailwind-merge": "^3.4.0",
             "tailwindcss": "^4.1.17",
             "three": "^0.170.0",
-            "vaul": "^1.1.2",
-            "ws": "^8.19.0"
+            "vaul": "^1.1.2"
       },
       "devDependencies": {
             "@testing-library/react": "^16.3.2",
