@@ -4,6 +4,8 @@ EchoBot is an AI assistant you can talk to or type to, with responses streaming 
 
 [![CI](https://github.com/aaadnan259/EchobotVoiceAssistant/actions/workflows/ci.yml/badge.svg)](https://github.com/aaadnan259/EchobotVoiceAssistant/actions/workflows/ci.yml)
 
+**Live app:** https://echobot-sics.onrender.com/
+
 ## What is EchoBot?
 
 EchoBot is a chat assistant powered by Google's Gemini models. You can type a message or dictate one using your browser's speech recognition, and have EchoBot's replies read back to you. Responses stream in as they're generated instead of appearing all at once, and you can attach images to a conversation alongside text.
