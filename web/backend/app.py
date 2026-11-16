@@ -129,7 +129,7 @@ async def lifespan(app: FastAPI):
     api_key = ConfigLoader.get("ai.google_api_key")
     if api_key:
         try:
-             gemini_client = genai.Client(api_key=api_key)
+             gemini_client = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
              logger.info("Shared Gemini Client Initialized")
         except Exception as e:
              logger.error(f"Failed to initialize Shared Gemini Client: {e}")

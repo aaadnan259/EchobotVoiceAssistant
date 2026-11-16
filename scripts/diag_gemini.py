@@ -11,7 +11,7 @@ def main():
 
     print("Initializing Gemini Client...")
     try:
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(api_key=api_key, http_options={"api_version": "v1beta"})
     except Exception as e:
         print(f"Failed to initialize client: {e}")
         sys.exit(1)
