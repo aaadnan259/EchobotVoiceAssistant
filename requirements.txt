@@ -1,7 +1,5 @@
 openai==3.49.0
 elevenlabs==2.79.0
-spacy==3.8.18
-nltk==3.10.4
 python-dotenv==1.2.4
 wikipedia==1.4.0
 requests==2.34.2
