@@ -4,11 +4,9 @@ from unittest.mock import MagicMock, patch, ANY
 import sys
 import json
 
-# Mock dependencies before importing LLMService
-sys.modules['google'] = MagicMock()
-sys.modules['google.genai'] = MagicMock()
-
-
+# NOTE: google/google.genai are mocked per-test in setUp via patch.dict. They used to
+# be assigned into sys.modules here at import time and never restored, which replaced
+# the real SDK for every test module collected afterwards.
 from services.llm.llm_service import LLMService
 
 class TestLLMServiceChat(unittest.TestCase):

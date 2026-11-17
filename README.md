@@ -73,7 +73,8 @@ At minimum, EchoBot needs a Gemini API key to respond to messages. Everything el
 | `GOOGLE_API_KEY` | **Yes** | Your Gemini API key ([get one here](https://aistudio.google.com/)). `GEMINI_API_KEY` also works, if you already use that name. |
 | `SESSION_SECRET` | No | Signs session tokens. A development value is generated automatically if left unset — fine locally, not for production. |
 | `FRONTEND_URL` | No | Only needed in production, to tell the backend which origin to accept requests from. Local development already works out of the box. |
-| `FEATURES_PLUGINS` | No | Set to `true` to enable the plugin/memory subsystem locally. |
+| `FEATURES_PLUGINS` | No | Set to `true` to let Gemini call tools (weather, Wikipedia, web search, calculator, time). Off by default. |
+| `FEATURES_MEMORY` | No | Set to `true` to enable ChromaDB conversation memory. Independent of `FEATURES_PLUGINS`; off by default. |
 
 Production deployment uses a few additional variables that aren't needed for local development — see `render.yaml`.
 

@@ -121,17 +121,27 @@ class TestLLMServiceInit(unittest.TestCase):
         self.assertIsNone(service.client)
         self.mock_logger.warning.assert_called_with("Google API Key not found.")
 
+    def test_memory_not_initialized_when_only_plugins_enabled(self):
+        """FEATURES_PLUGINS (tools) must not start ChromaDB memory; that needs FEATURES_MEMORY."""
+        self.mock_config.get.side_effect = lambda key, default=None: "google" if key == "ai.provider" else default
+
+        with patch.dict(os.environ, {"FEATURES_PLUGINS": "true", "FEATURES_MEMORY": "false"}):
+            service = self.LLMService()
+
+        self.mock_memory_service_cls.assert_not_called()
+        self.assertIsNone(service.memory_service)
+
     def test_memory_service_init_success(self):
         """Test successful MemoryService initialization.
 
-        Sets FEATURES_PLUGINS explicitly within this test's own scope (F7) rather
+        Sets FEATURES_MEMORY explicitly within this test's own scope (F7) rather
         than relying on ambient environment state, so this test passes regardless
         of what the ambient default happens to be."""
         mock_instance = MagicMock()
         self.mock_memory_service_cls.return_value = mock_instance
         self.mock_config.get.side_effect = lambda key, default=None: "google" if key == "ai.provider" else default
 
-        with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
+        with patch.dict(os.environ, {"FEATURES_MEMORY": "true"}):
             service = self.LLMService()
 
         self.mock_memory_service_cls.assert_called_once()
@@ -141,13 +151,13 @@ class TestLLMServiceInit(unittest.TestCase):
     def test_memory_service_init_failure(self):
         """Test MemoryService initialization failure.
 
-        Sets FEATURES_PLUGINS explicitly within this test's own scope (F7) rather
+        Sets FEATURES_MEMORY explicitly within this test's own scope (F7) rather
         than relying on ambient environment state, so this test passes regardless
         of what the ambient default happens to be."""
         self.mock_memory_service_cls.side_effect = Exception("Memory Error")
         self.mock_config.get.side_effect = lambda key, default=None: "google" if key == "ai.provider" else default
 
-        with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
+        with patch.dict(os.environ, {"FEATURES_MEMORY": "true"}):
             service = self.LLMService()
 
         self.assertIsNone(service.memory_service)
