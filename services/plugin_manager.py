@@ -5,6 +5,12 @@ import asyncio
 from typing import Dict, List, Any, Optional
 from utils.logger import logger
 
+class ToolFailure(ValueError):
+    """Raised by a plugin when a tool call fails in an expected way (place not
+    found, upstream service unavailable, ...). The message must be safe to show to
+    a model and a user. The tool registry reports it as ok=False."""
+
+
 class Plugin:
     """Base class for all EchoBot plugins."""
     name: str = "BasePlugin"

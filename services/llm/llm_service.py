@@ -31,9 +31,10 @@ class LLMService:
         else:
             logger.warning("Google API Key not found.")
 
-        # Initialize Memory only if plugins are enabled
-        ENABLE_PLUGINS = os.environ.get("FEATURES_PLUGINS", "false").lower() == "true"
-        if ENABLE_PLUGINS:
+        # Initialize Memory (ChromaDB) only if FEATURES_MEMORY is true. This is
+        # independent of FEATURES_PLUGINS, which only controls function-calling tools.
+        ENABLE_MEMORY = os.environ.get("FEATURES_MEMORY", "false").lower() == "true"
+        if ENABLE_MEMORY:
             try:
                 from services.memory.vector_store import MemoryService
                 self.memory_service = MemoryService()

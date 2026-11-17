@@ -63,3 +63,11 @@ Every deviation from the handoff document, every choice on D-items and Q-items, 
 |------|---------|------------|
 | Fabricated tests | The agent previously generated 20 fake edge case tests in `useSecureWebSocket.test.ts` that did not test any actual behavior. | Deleted the fake tests and replaced them with 6 real behavior tests covering auth success/failure, heartbeat reset, exponential backoff, rate limits, and token inclusion. |
 | Inconsistent raw output | Previous vitest runs presented truncated output omitting `geminiService.test.ts` due to sandbox truncations. | Explained the discrepancy and ran `npx vitest run --reporter=verbose 2>&1 | Tee-Object -FilePath vitest_output.txt`, committing the full tamper-evident file. |
+
+### D10: Gemini function-calling tools (Step 2, backend)
+- `FEATURES_PLUGINS=true` makes `POST /api/gemini/chat` declare five read-only tools (`get_weather`, `search_wikipedia`, `web_search`, `calculate`, `get_current_time`) and run a bounded function-calling loop (`web/backend/tool_loop.py`, `services/tool_registry.py`). With the flag off the endpoint is unchanged. `/api/gemini/chat-simple` never gets tools.
+- `FEATURES_MEMORY` (default false) now controls ChromaDB memory on its own; previously it rode on `FEATURES_PLUGINS`.
+- Reminders is not exposed (shared SQLite, no user identity). The web app no longer calls `PluginManager.load_plugins()`, so the reminder scheduler is not started by the flag.
+- Limits per user message: 4 model calls, 6 tool calls, 8s per tool, 4,000 characters per result. The last model call is sent with function calling set to `NONE`. The model's own turn (thought signatures included) is echoed back unmodified.
+- New SSE events: `{"tool_call": {id, name, args}}` and `{"tool_result": {id, name, ok, summary}}`.
+- Production keeps `FEATURES_PLUGINS` off; no Render setting was changed.

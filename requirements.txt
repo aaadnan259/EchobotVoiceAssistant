@@ -16,3 +16,4 @@ python-multipart==0.0.34
 slowapi==0.1.10
 itsdangerous==2.2.0
 google-genai==3.4.0
+tzdata==2026.6

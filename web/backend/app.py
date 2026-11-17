@@ -20,7 +20,8 @@ from starlette.requests import Request as StarletteRequest
 from fastapi.responses import JSONResponse
 
 from config.loader import ConfigLoader
-from services.plugin_manager import PluginManager
+from services.tool_registry import build_default_registry
+from web.backend.tool_loop import run_tool_loop
 from services.audio.tts import TTSEngine
 from utils.logger import logger
 from services.llm.llm_service import LLMService
@@ -249,7 +250,17 @@ async def gemini_chat(chat_request: ChatRequest, request: Request, _token=Depend
 
     async def event_generator():
         try:
-            if hasattr(gemini_client, 'aio'):
+            if tool_registry is not None:
+                # FEATURES_PLUGINS=true: function-calling loop (see tool_loop.py).
+                async for event in run_tool_loop(
+                    client=gemini_client,
+                    model=model,
+                    contents=contents,
+                    base_config=config_dict,
+                    registry=tool_registry,
+                ):
+                    yield f"data: {json.dumps(event)}\n\n"
+            elif hasattr(gemini_client, 'aio'):
                 response = await gemini_client.aio.models.generate_content_stream(
                     model=model,
                     contents=contents,
@@ -414,13 +425,20 @@ else:
 
 # Global Managers
 ENABLE_PLUGINS = os.environ.get("FEATURES_PLUGINS", "false").lower() == "true"
-plugin_manager = PluginManager() if ENABLE_PLUGINS else None
-if plugin_manager:
-    plugin_manager.load_plugins()
+ENABLE_MEMORY = os.environ.get("FEATURES_MEMORY", "false").lower() == "true"
+
+# FEATURES_PLUGINS controls Gemini function-calling tools only. Memory/ChromaDB is
+# a separate flag (FEATURES_MEMORY). Only the five read-only tools in
+# services/tool_registry.py are exposed; Reminders is not loaded here at all.
+tool_registry = None
+if ENABLE_PLUGINS:
+    _registry = build_default_registry()
+    tool_registry = _registry if _registry.names else None
+    logger.info(f"Function-calling tools enabled: {_registry.names}")
 
 # Initialize AI Services
 llm_service = LLMService()
-if not ENABLE_PLUGINS:
+if not ENABLE_MEMORY:
     llm_service.memory_service = None  # Force disable ChromaDB/Memory
 tts_engine = TTSEngine()
 voice_engine = None
