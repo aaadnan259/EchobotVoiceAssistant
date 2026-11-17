@@ -7,7 +7,6 @@ import json
 # Mock dependencies before importing LLMService
 sys.modules['google'] = MagicMock()
 sys.modules['google.genai'] = MagicMock()
-sys.modules['openai'] = MagicMock()
 
 
 from services.llm.llm_service import LLMService
@@ -20,7 +19,6 @@ class TestLLMServiceChat(unittest.TestCase):
         self.modules_patcher = patch.dict(sys.modules, {
             'google': MagicMock(),
             'google.genai': MagicMock(),
-            'openai': MagicMock(),
             'services.memory.vector_store': self.mock_memory_module
         })
         self.modules_patcher.start()

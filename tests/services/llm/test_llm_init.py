@@ -12,7 +12,6 @@ class TestLLMServiceInit(unittest.TestCase):
         self.modules_patcher = patch.dict(sys.modules, {
             'google': MagicMock(),
             'google.genai': MagicMock(),
-            'openai': MagicMock(),
             'services.memory.vector_store': self.mock_memory_module
         })
         self.modules_patcher.start()
@@ -28,10 +27,6 @@ class TestLLMServiceInit(unittest.TestCase):
         self.mock_genai_patcher = patch('services.llm.llm_service.genai')
         self.mock_genai = self.mock_genai_patcher.start()
 
-        # Patch openai
-        self.mock_openai_patcher = patch('services.llm.llm_service.openai')
-        self.mock_openai = self.mock_openai_patcher.start()
-
         # Patch logger
         self.mock_logger_patcher = patch('services.llm.llm_service.logger')
         self.mock_logger = self.mock_logger_patcher.start()
@@ -46,17 +41,26 @@ class TestLLMServiceInit(unittest.TestCase):
     def tearDown(self):
         self.mock_config_patcher.stop()
         self.mock_genai_patcher.stop()
-        self.mock_openai_patcher.stop()
         self.mock_logger_patcher.stop()
         self.modules_patcher.stop()
 
     def test_default_provider(self):
-        """Test provider defaults to 'openai' when config returns None."""
+        """Test provider defaults to 'google' when config returns None."""
         self.mock_config.get.side_effect = lambda key, default=None: default if key == "ai.provider" else None
 
         service = self.LLMService()
 
-        self.assertEqual(service.provider, "openai")
+        self.assertEqual(service.provider, "google")
+
+    def test_unknown_provider_raises(self):
+        """Any provider other than 'google' fails at startup with a clear message."""
+        self.mock_config.get.side_effect = lambda key, default=None: "gemini" if key == "ai.provider" else default
+
+        with self.assertRaises(ValueError) as ctx:
+            self.LLMService()
+
+        self.assertIn("'gemini'", str(ctx.exception))
+        self.assertIn("'google'", str(ctx.exception))
 
     def test_google_provider_config(self):
         """Test provider is 'google' when configured."""
@@ -104,19 +108,6 @@ class TestLLMServiceInit(unittest.TestCase):
         self.assertIsNotNone(service.client)
         self.mock_logger.info.assert_any_call(f"Initialized Google Gemini Client with model: gemini-3.6-flash")
 
-    def test_openai_client_init(self):
-        """Test OpenAI Client initialization."""
-        def config_side_effect(key, default=None):
-            if key == "ai.provider": return "openai"
-            if key == "ai.openai_api_key": return "fake_openai_key"
-            return default
-        self.mock_config.get.side_effect = config_side_effect
-
-        service = self.LLMService()
-
-        self.mock_openai.OpenAI.assert_called_once_with(api_key="fake_openai_key")
-        self.assertIsNotNone(service.client)
-
     def test_google_missing_key(self):
         """Test Google provider with missing API key."""
         def config_side_effect(key, default=None):
@@ -129,19 +120,6 @@ class TestLLMServiceInit(unittest.TestCase):
 
         self.assertIsNone(service.client)
         self.mock_logger.warning.assert_called_with("Google API Key not found.")
-
-    def test_openai_missing_key(self):
-        """Test OpenAI provider with missing API key."""
-        def config_side_effect(key, default=None):
-            if key == "ai.provider": return "openai"
-            if key == "ai.openai_api_key": return None
-            return default
-        self.mock_config.get.side_effect = config_side_effect
-
-        service = self.LLMService()
-
-        self.assertIsNone(service.client)
-        self.mock_logger.warning.assert_called_with("AI Provider is OpenAI but no API Key found.")
 
     def test_memory_service_init_success(self):
         """Test successful MemoryService initialization.
