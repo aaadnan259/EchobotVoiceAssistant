@@ -7,6 +7,20 @@ export enum OrbState {
   ERROR = 'ERROR',
 }
 
+/** A tool call made while producing a reply (only present when the backend runs tools). */
+export interface ToolCallInfo {
+  id: string;
+  name: string;
+  status: 'running' | 'ok' | 'failed';
+  /** Short server-provided result summary; shown as a tooltip. */
+  summary?: string;
+}
+
+/** Tool events from the SSE stream (mirrors web/backend/tool_loop.py). */
+export type ToolStreamEvent =
+  | { type: 'tool_call'; id: string; name: string }
+  | { type: 'tool_result'; id: string; name: string; ok: boolean; summary?: string };
+
 export interface Message {
   id: string;
   role: 'user' | 'model';
@@ -27,6 +41,8 @@ export interface Message {
   feedback?: string;
   /** True when this bot message is an error notice rather than a real reply. */
   isError?: boolean;
+  /** Tool calls made for this reply. Absent unless tool events arrived. */
+  toolCalls?: ToolCallInfo[];
   parentId?: string | null;
   branchId?: string;
 }

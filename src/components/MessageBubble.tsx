@@ -87,6 +87,37 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           {message.text}
         </p>
 
+        {/* Tool call chips (bot only; nothing rendered when there are none) */}
+        {isBot && message.toolCalls && message.toolCalls.length > 0 && (
+          <ul
+            aria-label="Tools used"
+            className="flex flex-wrap gap-1.5 mt-2 list-none p-0 m-0"
+          >
+            {message.toolCalls.map(tool => (
+              <li
+                key={tool.id}
+                data-testid="tool-chip"
+                data-status={tool.status}
+                title={tool.summary}
+                className={`
+                  inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs
+                  border border-gray-200 dark:border-white/10
+                  bg-gray-50 dark:bg-white/5
+                  ${tool.status === 'failed'
+                    ? 'text-red-500 dark:text-red-400'
+                    : 'text-gray-500 dark:text-gray-400'}
+                  ${tool.status === 'running' ? 'animate-pulse' : ''}
+                `}
+              >
+                <span>{tool.name}</span>
+                <span className="opacity-70">
+                  {tool.status === 'ok' ? 'ok' : tool.status === 'failed' ? 'failed' : '…'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
         {/* Footer: Timestamp and Actions */}
         <div
           className={`

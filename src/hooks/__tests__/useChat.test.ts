@@ -91,4 +91,51 @@ describe('useChat', () => {
 
         expect(result.current.isGenerating).toBe(false);
     });
+
+    describe('tool events', () => {
+        const setup = (updateMessage = vi.fn()) => renderHook(() => useChat({
+            messages: [],
+            addMessage: vi.fn(),
+            addPlaceholder: vi.fn(() => 'placeholder-id'),
+            updateMessage,
+            settings: { model: 'test', systemPrompt: '' } as any
+        }));
+
+        it('records tool calls on the bot message as running, then ok/failed', async () => {
+            (streamGeminiResponse as any).mockImplementation(async function* (...args: any[]) {
+                const onToolEvent = args[5];
+                onToolEvent({ type: 'tool_call', id: 'a', name: 'get_weather' });
+                onToolEvent({ type: 'tool_call', id: 'b', name: 'lookup' });
+                onToolEvent({ type: 'tool_result', id: 'a', name: 'get_weather', ok: true, summary: '12C' });
+                onToolEvent({ type: 'tool_result', id: 'b', name: 'lookup', ok: false, summary: 'nope' });
+                yield 'Done';
+            });
+            const updateMessage = vi.fn();
+            const { result } = setup(updateMessage);
+
+            await act(async () => { await result.current.sendMessage('Hi'); });
+
+            const withTools = updateMessage.mock.calls.filter(([, u]) => u.toolCalls);
+            expect(withTools[0][1].toolCalls).toEqual([
+                { id: 'a', name: 'get_weather', status: 'running' },
+            ]);
+            expect(withTools[withTools.length - 1][1].toolCalls).toEqual([
+                { id: 'a', name: 'get_weather', status: 'ok', summary: '12C' },
+                { id: 'b', name: 'lookup', status: 'failed', summary: 'nope' },
+            ]);
+            expect(updateMessage).toHaveBeenCalledWith('placeholder-id', { text: 'Done' });
+        });
+
+        it('never writes toolCalls when no tool events arrive', async () => {
+            (streamGeminiResponse as any).mockImplementation(async function* () {
+                yield 'Hello';
+            });
+            const updateMessage = vi.fn();
+            const { result } = setup(updateMessage);
+
+            await act(async () => { await result.current.sendMessage('Hi'); });
+
+            expect(updateMessage.mock.calls.every(([, u]) => !('toolCalls' in u))).toBe(true);
+        });
+    });
 });
