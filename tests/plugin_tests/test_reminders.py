@@ -17,6 +17,7 @@ sys.modules['yaml'] = MagicMock()
 
 # Mock ConfigLoader module
 mock_config_loader = MagicMock()
+_real_config_loader = sys.modules.get('config.loader')
 sys.modules['config.loader'] = mock_config_loader
 # Ensure ConfigLoader class exists on the mock module
 mock_config_loader.ConfigLoader = MagicMock()
@@ -26,6 +27,13 @@ mock_sqlite3 = MagicMock()
 sys.modules['sqlite3'] = mock_sqlite3
 
 from plugins.standard.reminders import ReminderPlugin
+
+# Restore the real config.loader so later test modules (e.g. web app imports,
+# which build LLMService at import time) do not inherit this mock.
+if _real_config_loader is None:
+    sys.modules.pop('config.loader', None)
+else:
+    sys.modules['config.loader'] = _real_config_loader
 
 class TestReminderPlugin(unittest.TestCase):
     def setUp(self):

@@ -30,7 +30,8 @@ class TestLLMServiceChat(unittest.TestCase):
 
         # Patch ConfigLoader to avoid reading real config
         self.mock_config_patcher = patch('services.llm.llm_service.ConfigLoader')
-        self.mock_config = self.mock_config_patcher.start().return_value
+        # Configure the class mock itself: LLMService calls ConfigLoader.get(...) directly.
+        self.mock_config = self.mock_config_patcher.start()
 
         # Patch logger to suppress output
         self.mock_logger_patcher = patch('services.llm.llm_service.logger')
