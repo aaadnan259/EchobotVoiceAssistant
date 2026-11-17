@@ -178,4 +178,60 @@ describe('geminiService', () => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
         expect(refreshToken).toHaveBeenCalledTimes(1);
     });
+
+    describe('tool events', () => {
+        const sse = (...frames: string[]) => new ReadableStream({
+            start(controller) {
+                for (const f of frames) controller.enqueue(new TextEncoder().encode(`data: ${f}\n\n`));
+                controller.close();
+            }
+        });
+
+        it('reports tool_call and tool_result frames to onToolEvent without touching the text', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                body: sse(
+                    '{"text": "Checking. "}',
+                    '{"tool_call": {"id": "c1", "name": "get_weather", "args": {"location": "Paris"}}}',
+                    '{"tool_result": {"id": "c1", "name": "get_weather", "ok": false, "summary": "not found"}}',
+                    '{"text": "Sorry."}',
+                    '{"done": true}',
+                ),
+            }) as any;
+
+            const events: any[] = [];
+            let text = '';
+            for await (const chunk of streamGeminiResponse('test', '', [], 'test', undefined, e => events.push(e))) {
+                text += chunk;
+            }
+
+            expect(text).toBe('Checking. Sorry.');
+            expect(events).toEqual([
+                { type: 'tool_call', id: 'c1', name: 'get_weather' },
+                { type: 'tool_result', id: 'c1', name: 'get_weather', ok: false, summary: 'not found' },
+            ]);
+        });
+
+        it('does not call onToolEvent when the stream has no tool frames', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                body: sse('{"text": "hi"}', '{"done": true}'),
+            }) as any;
+
+            const onToolEvent = vi.fn();
+            for await (const _ of streamGeminiResponse('test', '', [], 'test', undefined, onToolEvent)) { /* drain */ }
+            expect(onToolEvent).not.toHaveBeenCalled();
+        });
+
+        it('ignores tool frames when no callback is given', async () => {
+            global.fetch = vi.fn().mockResolvedValue({
+                ok: true,
+                body: sse('{"tool_call": {"id": "c1", "name": "x", "args": {}}}', '{"text": "ok"}', '{"done": true}'),
+            }) as any;
+
+            let text = '';
+            for await (const chunk of streamGeminiResponse('test', '', [], 'test')) text += chunk;
+            expect(text).toBe('ok');
+        });
+    });
 });

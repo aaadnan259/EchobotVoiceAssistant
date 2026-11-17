@@ -1,4 +1,4 @@
-import { Message } from "../types";
+import { Message, ToolStreamEvent } from "../types";
 import { logger } from "../utils/logger";
 import { getToken, refreshToken } from "./sessionService";
 
@@ -20,7 +20,8 @@ export async function* streamGeminiResponse(
   systemInstruction: string,
   history: Message[],
   newMessage: string,
-  images?: string[]
+  images?: string[],
+  onToolEvent?: (event: ToolStreamEvent) => void
 ): AsyncGenerator<string, void, unknown> {
   const requestBody = JSON.stringify({
     modelName,
@@ -93,6 +94,22 @@ export async function* streamGeminiResponse(
           // Stage 2: Handle data (errors propagate to caller)
           if (data.error) {
             throw new Error(data.error);
+          }
+
+          // Only sent when the backend's tool loop is enabled.
+          const call = data.tool_call;
+          if (call && typeof call.id === 'string' && typeof call.name === 'string') {
+            onToolEvent?.({ type: 'tool_call', id: call.id, name: call.name });
+          }
+          const result = data.tool_result;
+          if (result && typeof result.id === 'string' && typeof result.name === 'string') {
+            onToolEvent?.({
+              type: 'tool_result',
+              id: result.id,
+              name: result.name,
+              ok: result.ok === true,
+              summary: typeof result.summary === 'string' ? result.summary : undefined,
+            });
           }
 
           if (data.text) {

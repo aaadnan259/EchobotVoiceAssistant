@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { Message, OrbState, AppSettings } from '../types';
+import { Message, OrbState, AppSettings, ToolCallInfo, ToolStreamEvent } from '../types';
 import { playSound, CHAT_MESSAGES, UI_CONFIG } from '../constants';
 import { streamGeminiResponse } from '../services/geminiService';
 import { logger } from '../utils/logger';
@@ -72,13 +72,30 @@ export function useChat({
         // Create placeholder for bot response
         const botMsgId = addPlaceholder('model');
 
+        // Stays empty (and is never written to the message) unless the backend
+        // sends tool events, so replies are unchanged when tools are off.
+        let toolCalls: ToolCallInfo[] = [];
+        const onToolEvent = (event: ToolStreamEvent) => {
+            if (event.type === 'tool_call') {
+                if (toolCalls.some(t => t.id === event.id)) return;
+                toolCalls = [...toolCalls, { id: event.id, name: event.name, status: 'running' }];
+            } else {
+                const status = event.ok ? 'ok' : 'failed';
+                toolCalls = toolCalls.some(t => t.id === event.id)
+                    ? toolCalls.map(t => t.id === event.id ? { ...t, status, summary: event.summary } : t)
+                    : [...toolCalls, { id: event.id, name: event.name, status, summary: event.summary }];
+            }
+            updateMessage(botMsgId, { toolCalls });
+        };
+
         try {
             const stream = await streamGeminiResponse(
                 settings.model,
                 settings.systemPrompt,
                 messagesRef.current,
                 userText,
-                images
+                images,
+                onToolEvent
             );
 
             updateOrbState(OrbState.RESPONDING);
@@ -98,6 +115,12 @@ export function useChat({
                 updateMessage(botMsgId, {
                     text: fullText
                 });
+            }
+
+            // A stopped stream can leave calls without a result; don't show them as running forever.
+            if (toolCalls.some(t => t.status === 'running')) {
+                toolCalls = toolCalls.map(t => t.status === 'running' ? { ...t, status: 'failed' as const } : t);
+                updateMessage(botMsgId, { toolCalls });
             }
 
             updateOrbState(OrbState.IDLE);
