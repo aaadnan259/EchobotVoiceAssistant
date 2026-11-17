@@ -11,7 +11,6 @@ class TestLLMService(unittest.TestCase):
         self.modules_patcher = patch.dict(sys.modules, {
             'google': MagicMock(),
             'google.genai': MagicMock(),
-            'openai': MagicMock(),
             'yaml': MagicMock(),
             'dotenv': MagicMock(),
             'colorama': MagicMock(),

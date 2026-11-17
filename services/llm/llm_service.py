@@ -1,6 +1,5 @@
 import os
 from google import genai
-import openai
 from typing import List, Dict, Any, Optional
 from config.loader import ConfigLoader
 from utils.logger import logger
@@ -12,29 +11,25 @@ class MockMessage:
 
 class LLMService:
     def __init__(self):
-        self.provider = ConfigLoader.get("ai.provider", "openai")
+        self.provider = ConfigLoader.get("ai.provider", "google")
         self.api_key = None
         self.model_name = ConfigLoader.get("ai.llm_model", "gemini-3.6-flash")
         self.client = None
-        
-        if self.provider == "google":
-            self.api_key = ConfigLoader.get("ai.google_api_key")
-            if self.api_key:
-                try:
-                    self.client = genai.Client(api_key=self.api_key, http_options={"api_version": "v1beta"})
-                    logger.info(f"Initialized Google Gemini Client with model: {self.model_name}")
-                except Exception as e:
-                    logger.error(f"Failed to initialize Google Gemini Client: {e}")
-            else:
-                logger.warning("Google API Key not found.")
-        
+
+        if self.provider != "google":
+            raise ValueError(
+                f"Unsupported ai.provider {self.provider!r}: the only supported provider is 'google'."
+            )
+
+        self.api_key = ConfigLoader.get("ai.google_api_key")
+        if self.api_key:
+            try:
+                self.client = genai.Client(api_key=self.api_key, http_options={"api_version": "v1beta"})
+                logger.info(f"Initialized Google Gemini Client with model: {self.model_name}")
+            except Exception as e:
+                logger.error(f"Failed to initialize Google Gemini Client: {e}")
         else:
-            # Fallback to OpenAI
-            self.api_key = ConfigLoader.get("ai.openai_api_key")
-            if self.api_key:
-                self.client = openai.OpenAI(api_key=self.api_key)
-            else:
-                logger.warning("AI Provider is OpenAI but no API Key found.")
+            logger.warning("Google API Key not found.")
 
         # Initialize Memory only if plugins are enabled
         ENABLE_PLUGINS = os.environ.get("FEATURES_PLUGINS", "false").lower() == "true"
@@ -53,10 +48,7 @@ class LLMService:
         """
         Get a response from the LLM, abstracting the provider.
         """
-        if self.provider == "google":
-            return self._get_google_response(messages, tools)
-        else:
-            return self._get_openai_response(messages, tools)
+        return self._get_google_response(messages, tools)
 
     def _get_google_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
         try:
@@ -96,26 +88,6 @@ class LLMService:
         except Exception as e:
             logger.error(f"Google Gemini Error: {e}", exc_info=True)
             return MockMessage("I'm having trouble thinking right now.")
-
-    def _get_openai_response(self, messages: List[Dict[str, str]], tools: List[Dict[str, Any]] = None) -> Any:
-        if not self.client:
-            return MockMessage("I'm sorry, OpenAI is not connected.")
-
-        try:
-            params = {
-                "model": self.model_name,
-                "messages": messages,
-                "temperature": 0.7
-            }
-            if tools:
-                params["tools"] = tools
-                params["tool_choice"] = "auto"
-
-            response = self.client.chat.completions.create(**params)
-            return response.choices[0].message
-        except Exception as e:
-            logger.error(f"OpenAI Error: {e}", exc_info=True)
-            return MockMessage(f"OpenAI Error: {str(e)}")
 
     def chat(self, user_input: str, context: List[Dict[str, str]] = None, tools: List[Dict[str, Any]] = None) -> Any:
         # (Same logic as before, just wrapper)

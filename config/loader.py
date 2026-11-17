@@ -46,8 +46,6 @@ class ConfigLoader:
         else:
             logger.warning("No Gemini API key found!")
 
-        if os.getenv("OPENAI_API_KEY"):
-            cls._settings.setdefault("ai", {})["openai_api_key"] = os.getenv("OPENAI_API_KEY")
         if os.getenv("ELEVENLABS_API_KEY"):
             cls._settings.setdefault("voice", {})["elevenlabs_api_key"] = os.getenv("ELEVENLABS_API_KEY")
         if os.getenv("GEMINI_MODEL"):
