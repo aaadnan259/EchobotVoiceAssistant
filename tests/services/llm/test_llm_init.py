@@ -151,6 +151,7 @@ class TestLLMServiceInit(unittest.TestCase):
         of what the ambient default happens to be."""
         mock_instance = MagicMock()
         self.mock_memory_service_cls.return_value = mock_instance
+        self.mock_config.get.side_effect = lambda key, default=None: "google" if key == "ai.provider" else default
 
         with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
             service = self.LLMService()
@@ -166,6 +167,7 @@ class TestLLMServiceInit(unittest.TestCase):
         than relying on ambient environment state, so this test passes regardless
         of what the ambient default happens to be."""
         self.mock_memory_service_cls.side_effect = Exception("Memory Error")
+        self.mock_config.get.side_effect = lambda key, default=None: "google" if key == "ai.provider" else default
 
         with patch.dict(os.environ, {"FEATURES_PLUGINS": "true"}):
             service = self.LLMService()

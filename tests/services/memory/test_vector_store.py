@@ -46,6 +46,9 @@ class TestMemoryService(unittest.TestCase):
 
         # Import MemoryService inside the patched environment
         # If it was already imported, reload it to pick up the mocks
+        # Drop any stale entry (e.g. a MagicMock left by another test module) so
+        # the import below loads the real module, which reload() requires.
+        sys.modules.pop('services.memory.vector_store', None)
         import services.memory.vector_store
         vector_store_module = sys.modules['services.memory.vector_store']
         importlib.reload(vector_store_module)
